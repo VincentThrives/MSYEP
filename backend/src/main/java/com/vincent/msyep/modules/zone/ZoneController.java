@@ -1,6 +1,7 @@
 package com.vincent.msyep.modules.zone;
 
 import com.vincent.msyep.common.ApiResponse;
+import com.vincent.msyep.modules.zone.dto.ZoneRegistrationResult;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -17,9 +18,11 @@ import java.util.Map;
 public class ZoneController {
 
     private final ZoneService service;
+    private final ZoneRegistrationService registration;
 
-    public ZoneController(ZoneService service) {
+    public ZoneController(ZoneService service, ZoneRegistrationService registration) {
         this.service = service;
+        this.registration = registration;
     }
 
     @GetMapping
@@ -33,9 +36,20 @@ public class ZoneController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
-    public ApiResponse<Zone> create(@RequestBody Zone zone) {
-        return ApiResponse.ok("Zone created", service.create(zone));
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','ZONE')")
+    public ApiResponse<ZoneRegistrationResult> create(@RequestBody Zone zone) {
+        ZoneRegistrationResult result = registration.register(zone);
+        return ApiResponse.ok(result.note(), result);
+    }
+
+    @PostMapping("/{id}/documents")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','ZONE')")
+    public ApiResponse<Zone> uploadDocument(
+            @PathVariable String id,
+            @RequestParam("type") String type,
+            @RequestParam(value = "label", required = false) String label,
+            @RequestParam("file") MultipartFile file) {
+        return ApiResponse.ok("Document uploaded", service.attachDocument(id, type, label, file));
     }
 
     @PutMapping("/{id}")

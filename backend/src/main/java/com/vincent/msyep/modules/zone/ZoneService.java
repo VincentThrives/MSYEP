@@ -11,12 +11,16 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,9 +30,11 @@ import java.util.List;
 public class ZoneService {
 
     private final ZoneRepository repo;
+    private final String uploadsDir;
 
-    public ZoneService(ZoneRepository repo) {
+    public ZoneService(ZoneRepository repo, @Value("${app.uploads-dir:uploads}") String uploadsDir) {
         this.repo = repo;
+        this.uploadsDir = uploadsDir;
     }
 
     public List<Zone> findAll() {
@@ -46,21 +52,62 @@ public class ZoneService {
         return repo.save(zone);
     }
 
-    public Zone update(String id, Zone changes) {
-        Zone existing = findById(id);
-        existing.setName(changes.getName());
-        existing.setCode(changes.getCode());
-        existing.setDistrict(changes.getDistrict());
-        existing.setTaluk(changes.getTaluk());
-        existing.setGramPanchayat(changes.getGramPanchayat());
-        existing.setContactPerson(changes.getContactPerson());
-        existing.setContactEmail(changes.getContactEmail());
-        existing.setContactPhone(changes.getContactPhone());
-        if (changes.getCourses() != null) existing.setCourses(changes.getCourses());
-        if (changes.getKitDetails() != null) existing.setKitDetails(changes.getKitDetails());
-        existing.setActive(changes.isActive());
-        existing.setUpdatedAt(Instant.now());
-        return repo.save(existing);
+    public Zone update(String id, Zone c) {
+        Zone e = findById(id);
+        e.setName(c.getName());
+        // code / id / login immutable once generated.
+        e.setDistrict(c.getDistrict());
+        e.setTaluk(c.getTaluk());
+        e.setGramPanchayat(c.getGramPanchayat());
+        e.setContactPerson(c.getContactPerson());
+        e.setContactEmail(c.getContactEmail());
+        e.setContactPhone(c.getContactPhone());
+        // Organization
+        e.setOrganizationName(c.getOrganizationName());
+        e.setHasWebsite(c.isHasWebsite());
+        e.setWebsiteLink(c.getWebsiteLink());
+        e.setWebsiteBudget(c.getWebsiteBudget());
+        e.setBuildingOwnership(c.getBuildingOwnership());
+        e.setHasRegisteredCopy(c.isHasRegisteredCopy());
+        e.setHasMsme(c.isHasMsme());
+        e.setHasGst(c.isHasGst());
+        e.setHasNitiAayog(c.isHasNitiAayog());
+        e.setHasNgoDarpan(c.isHasNgoDarpan());
+        e.setHas12A80G(c.isHas12A80G());
+        e.setWillingToComply(c.isWillingToComply());
+        // Owner
+        e.setOwnerName(c.getOwnerName());
+        e.setOwnerDob(c.getOwnerDob());
+        e.setOwnerGender(c.getOwnerGender());
+        e.setContactNumber(c.getContactNumber());
+        e.setAlternateNumber(c.getAlternateNumber());
+        e.setEmail(c.getEmail());
+        e.setFullAddress(c.getFullAddress());
+        e.setCity(c.getCity());
+        e.setState(c.getState());
+        e.setPincode(c.getPincode());
+        e.setOccupation(c.getOccupation());
+        e.setEducationalQualification(c.getEducationalQualification());
+        // KYC
+        e.setAadhaarNumber(c.getAadhaarNumber());
+        e.setPanNumber(c.getPanNumber());
+        e.setBankAccountDetails(c.getBankAccountDetails());
+        // Business fit
+        e.setInvestmentCapacity(c.getInvestmentCapacity());
+        e.setPreferredLocation(c.getPreferredLocation());
+        e.setSpaceOwnership(c.getSpaceOwnership());
+        e.setSpaceSqft(c.getSpaceSqft());
+        e.setStartTimeline(c.getStartTimeline());
+        // Membership
+        e.setMembershipTier(c.getMembershipTier());
+        e.setMembershipAmount(c.getMembershipAmount());
+        e.setTcAccepted(c.isTcAccepted());
+        if (c.getStatus() != null) e.setStatus(c.getStatus());
+        if (c.getCourses() != null) e.setCourses(c.getCourses());
+        if (c.getKitDetails() != null) e.setKitDetails(c.getKitDetails());
+        e.setActive(c.isActive());
+        e.setUpdatedAt(Instant.now());
+        return repo.save(e);
     }
 
     public void delete(String id) {
@@ -68,6 +115,26 @@ public class ZoneService {
             throw new ResourceNotFoundException("Zone not found: " + id);
         }
         repo.deleteById(id);
+    }
+
+    /** Save an uploaded franchise document to disk and attach it to the zone. */
+    public Zone attachDocument(String id, String type, String label, MultipartFile file) {
+        Zone zone = findById(id);
+        if (file == null || file.isEmpty()) throw new IllegalArgumentException("No file provided");
+        if (file.getSize() > 2 * 1024 * 1024) throw new IllegalArgumentException("File exceeds 2 MB limit");
+        try {
+            Path dir = Paths.get(uploadsDir, "zones", id);
+            Files.createDirectories(dir);
+            String original = file.getOriginalFilename() == null ? "file" : file.getOriginalFilename();
+            String safe = type + "_" + original.replaceAll("[^a-zA-Z0-9._-]", "_");
+            file.transferTo(dir.resolve(safe).toAbsolutePath());
+            zone.getDocuments().removeIf(d -> type.equals(d.getType()));
+            zone.getDocuments().add(new ZoneDocument(type, label, original, file.getSize(),
+                    Paths.get("zones", id, safe).toString()));
+            return repo.save(zone);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to store file: " + ex.getMessage());
+        }
     }
 
     /**

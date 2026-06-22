@@ -24,10 +24,64 @@ export interface AuthResponse {
   studentId?: string;
 }
 
+export interface ZoneDocument {
+  type: string;
+  label: string;
+  filename: string;
+  size: number;
+  path: string;
+}
+
 export interface Zone {
   id?: string;
   name: string;
   code?: string;
+  // Login
+  userId?: string;
+  password?: string;
+  // Organization
+  organizationName?: string;
+  hasWebsite?: boolean;
+  websiteLink?: string;
+  websiteBudget?: string;
+  buildingOwnership?: string;
+  hasRegisteredCopy?: boolean;
+  hasMsme?: boolean;
+  hasGst?: boolean;
+  hasNitiAayog?: boolean;
+  hasNgoDarpan?: boolean;
+  has12A80G?: boolean;
+  willingToComply?: boolean;
+  // Owner
+  ownerName?: string;
+  ownerDob?: string;
+  ownerGender?: string;
+  contactNumber?: string;
+  alternateNumber?: string;
+  email?: string;
+  fullAddress?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  occupation?: string;
+  educationalQualification?: string;
+  // KYC
+  aadhaarNumber?: string;
+  panNumber?: string;
+  bankAccountDetails?: string;
+  // Business fit
+  investmentCapacity?: string;
+  preferredLocation?: string;
+  spaceOwnership?: string;
+  spaceSqft?: string;
+  startTimeline?: string;
+  // Membership
+  membershipTier?: string;
+  membershipAmount?: number;
+  tcAccepted?: boolean;
+  status?: string;
+  registrationDate?: string;
+  // existing geo/contact
   district?: string;
   taluk?: string;
   gramPanchayat?: string;
@@ -36,8 +90,45 @@ export interface Zone {
   contactPhone?: string;
   courses?: string[];
   kitDetails?: string[];
+  documents?: ZoneDocument[];
   active?: boolean;
 }
+
+export interface ZoneRegistrationResult {
+  zone: Zone;
+  zoneCode: string;
+  loginId: string;
+  status: string;
+  membershipAmount: number;
+  note: string;
+}
+
+export const GENDERS = ['Male', 'Female', 'Other'];
+export const OWN_RENT = ['Own', 'Rent'];
+export const INVESTMENT_CAPACITY = ['Below 1 Lakh', '1–5 Lakhs', '5–10 Lakhs', 'Above 10 Lakhs'];
+export const START_TIMELINE = ['Immediately', 'Within 3 months', 'Within 6 months', 'Later'];
+
+export const MEMBERSHIP_TIERS: { name: string; amount: number }[] = [
+  { name: 'Silver', amount: 50000 },
+  { name: 'Gold', amount: 75000 },
+  { name: 'Platinum', amount: 100000 },
+  { name: 'Diamond', amount: 125000 },
+];
+
+/** Franchise document upload slots. */
+export const ZONE_DOC_SLOTS: { type: string; label: string }[] = [
+  { type: 'aadhaar', label: 'Aadhaar Card Photo' },
+  { type: 'pan', label: 'PAN Card Photo' },
+  { type: 'bank', label: 'Bank Account Details Photo' },
+  { type: 'logo', label: 'Organization Logo' },
+  { type: 'registeredCopy', label: 'Organization Registered Copy' },
+  { type: 'msme', label: 'MSME Copy' },
+  { type: 'gst', label: 'GST Copy' },
+  { type: 'nitiAayog', label: 'Niti Aayog Copy' },
+  { type: 'ngoDarpan', label: 'NGO Darpan Copy' },
+  { type: 'doc12A80G', label: '12A / 80G Copy' },
+  { type: 'building', label: 'Building (Own / Rent) Copy' },
+];
 
 export interface CenterDocument {
   type: string;

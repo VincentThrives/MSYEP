@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
-import { Center, CenterRegistrationResult, EntranceResult, EntranceStart, FinanceRow, GramPanchayat, Staff, Student, Zone } from './models';
+import { Center, CenterRegistrationResult, EntranceResult, EntranceStart, FinanceRow, GramPanchayat, Staff, Student, Zone, ZoneRegistrationResult } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class DataService {
@@ -10,11 +10,18 @@ export class DataService {
   // Zones
   zones = (): Observable<Zone[]> => this.api.get<Zone[]>('/zones');
   zone = (id: string) => this.api.get<Zone>(`/zones/${id}`);
-  createZone = (z: Zone) => this.api.post<Zone>('/zones', z);
+  createZone = (z: Zone) => this.api.post<ZoneRegistrationResult>('/zones', z);
   updateZone = (id: string, z: Zone) => this.api.put<Zone>(`/zones/${id}`, z);
   deleteZone = (id: string) => this.api.delete<void>(`/zones/${id}`);
   importZones = (file: File) => this.api.upload<{ imported: number }>('/zones/import', file);
   zonePdf = (id: string) => this.api.blob(`/zones/${id}/pdf`);
+  uploadZoneDocument = (id: string, type: string, label: string, file: File) => {
+    const form = new FormData();
+    form.append('type', type);
+    form.append('label', label);
+    form.append('file', file);
+    return this.api.post<Zone>(`/zones/${id}/documents`, form);
+  };
 
   // Centers
   centers = (zoneId?: string): Observable<Center[]> =>
