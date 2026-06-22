@@ -1,0 +1,14 @@
+    <mat-form-field appearance="outline">
+      <mat-label>{{ label() }}</mat-label>
+      <mat-select [value]="value()" (selectionChange)="value.set($event.value)" [disabled]="disabled()">
+        <mat-select-trigger>{{ displayLabel() }}</mat-select-trigger>
+        <mat-option>
+          <ngx-mat-select-search [formControl]="filterCtrl"
+            [placeholderLabel]="'Search ' + label().toLowerCase() + '…'"
+            noEntriesFoundLabel="No match"></ngx-mat-select-search>
+        </mat-option>
+        <mat-option *ngIf="emptyOption()" [value]="undefined">{{ emptyLabel() }}</mat-option>
+        <mat-option *ngFor="let o of filtered()" [value]="optVal(o)">{{ optLabel(o) }}</mat-option>
+      </mat-select>
+    </mat-form-field>
+  

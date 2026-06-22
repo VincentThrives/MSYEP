@@ -1,0 +1,35 @@
+    .head { display: flex; justify-content: space-between; align-items: center; }
+    .head-actions { display: flex; gap: 10px; }
+    .form-panel, .reg-panel { background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 18px; margin: 16px 0; }
+    .reg-panel { border: 1px solid #cfe9d8; background: linear-gradient(180deg,#f3faf5,#ffffff); }
+    .reg-head { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #0E5132; }
+    .reg-head mat-icon { color: #1E7A46; } .reg-head button { margin-left: auto; }
+    .reg-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); gap: 10px; margin: 12px 0; }
+    .reg-grid .k, .auto-field .k { display: block; font-size: 12px; color: #6b7d72; }
+    .reg-grid .v { font-weight: 600; }
+    .reg-note { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #8a6d1a;
+      background: #fbf3d6; padding: 8px 12px; border-radius: 8px; margin-bottom: 12px; }
+    .reg-note.ok { color: #0E5132; background: #e7f3ec; }
+    .tab { padding: 18px 4px 4px; }
+    .sec { color: #0E5132; border-left: 4px solid #C9A227; padding-left: 10px; margin: 8px 0 12px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .row mat-form-field { flex: 1; min-width: 200px; }
+    .row .wide { flex: 1 1 100%; }
+    .row .grow { flex: 2; }
+    .toggle-row { align-items: center; }
+    .hint { color: #999; font-size: 12px; }
+    .allot { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 12px; margin-bottom: 14px; }
+    .auto-field { background: #f3faf5; border: 1px dashed #cfe9d8; border-radius: 10px; padding: 10px 12px; }
+    .auto-field .v { font-weight: 600; color: #0E5132; }
+    .docs { display: grid; grid-template-columns: repeat(auto-fit,minmax(300px,1fr)); gap: 14px; }
+    .docs.two { grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); margin-top: 8px; }
+    .doc { border: 1px solid #eee; border-radius: 10px; padding: 12px; }
+    .doc-label { font-size: 13px; color: #444; margin-bottom: 8px; min-height: 34px; }
+    .doc-pick { display: flex; align-items: center; gap: 10px; }
+    .doc-name { font-size: 12px; color: #999; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .doc-name.has { color: #1E7A46; font-weight: 600; }
+    .mono { font-family: monospace; } .small { font-size: 12px; color: #555; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+    .full { width: 100%; margin-top: 12px; }
+    .empty { color: #999; margin-top: 16px; }
+  

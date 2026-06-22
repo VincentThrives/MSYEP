@@ -1,0 +1,230 @@
+    <div class="head">
+      <h1>Zones / Franchise</h1>
+      <button mat-flat-button color="primary" (click)="newZone()">
+        <mat-icon>add_business</mat-icon> Franchise Sign-up
+      </button>
+    </div>
+
+    <!-- Success -->
+    <div class="reg-panel" *ngIf="result() as r">
+      <div class="reg-head">
+        <mat-icon>check_circle</mat-icon><span>Franchise registered</span>
+        <button mat-icon-button (click)="result.set(null)"><mat-icon>close</mat-icon></button>
+      </div>
+      <div class="reg-grid">
+        <div><span class="k">Zone Code</span><span class="v mono">{{ r.zoneCode }}</span></div>
+        <div><span class="k">Login (User ID)</span><span class="v">{{ r.loginId || '—' }}</span></div>
+        <div><span class="k">Membership</span><span class="v">{{ r.zone.membershipTier }} · ₹{{ r.membershipAmount | number }}</span></div>
+        <div><span class="k">Status</span><span class="v badge">{{ r.status }}</span></div>
+      </div>
+      <div class="reg-note"><mat-icon>info</mat-icon> {{ r.note }}</div>
+    </div>
+
+    <div class="form-panel" *ngIf="editing()">
+      <mat-tab-group>
+        <!-- 1: Login & Organization -->
+        <mat-tab label="Login & Organization">
+          <div class="tab">
+            <div class="row">
+              <mat-form-field appearance="outline"><mat-label>User ID</mat-label>
+                <mat-icon matPrefix>person</mat-icon>
+                <input matInput [(ngModel)]="form.userId" autocomplete="off" [disabled]="!!form.id" /></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Password</mat-label>
+                <mat-icon matPrefix>lock</mat-icon>
+                <input matInput type="password" [(ngModel)]="form.password" autocomplete="new-password" [disabled]="!!form.id" /></mat-form-field>
+            </div>
+            <div class="row">
+              <mat-form-field appearance="outline"><mat-label>Organization Name</mat-label>
+                <input matInput [(ngModel)]="form.organizationName" /></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Zone / University Name</mat-label>
+                <input matInput [(ngModel)]="form.name" placeholder="defaults to organization name" /></mat-form-field>
+            </div>
+            <div class="row">
+              <app-search-select label="Building (Own / Rent)" [options]="ownRent"
+                [(value)]="form.buildingOwnership"></app-search-select>
+              <mat-checkbox [(ngModel)]="form.hasWebsite" class="chk">Organization has a website?</mat-checkbox>
+            </div>
+            <div class="row" *ngIf="form.hasWebsite">
+              <mat-form-field appearance="outline" class="wide"><mat-label>Website link</mat-label>
+                <input matInput [(ngModel)]="form.websiteLink" placeholder="https://" /></mat-form-field>
+            </div>
+            <div class="row" *ngIf="!form.hasWebsite">
+              <mat-form-field appearance="outline" class="wide"><mat-label>Budget to create the website</mat-label>
+                <input matInput [(ngModel)]="form.websiteBudget" /></mat-form-field>
+            </div>
+            <h4 class="sub">Documents available (upload in the Documents tab)</h4>
+            <div class="flags">
+              <mat-checkbox [(ngModel)]="form.hasRegisteredCopy">Registered Copy</mat-checkbox>
+              <mat-checkbox [(ngModel)]="form.hasMsme">MSME</mat-checkbox>
+              <mat-checkbox [(ngModel)]="form.hasGst">GST</mat-checkbox>
+              <mat-checkbox [(ngModel)]="form.hasNitiAayog">Niti Aayog</mat-checkbox>
+              <mat-checkbox [(ngModel)]="form.hasNgoDarpan">NGO Darpan</mat-checkbox>
+              <mat-checkbox [(ngModel)]="form.has12A80G">12A / 80G</mat-checkbox>
+            </div>
+            <mat-checkbox [(ngModel)]="form.willingToComply" class="chk">
+              If documents not available — willing to comply with us?
+            </mat-checkbox>
+          </div>
+        </mat-tab>
+
+        <!-- 2: Owner Details -->
+        <mat-tab label="Owner Details">
+          <div class="tab">
+            <div class="row">
+              <mat-form-field appearance="outline"><mat-label>Owner Full Name</mat-label>
+                <input matInput [(ngModel)]="form.ownerName" /></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Date of Birth</mat-label>
+                <input matInput type="date" [(ngModel)]="form.ownerDob" /></mat-form-field>
+              <app-search-select label="Gender" [options]="genders" [(value)]="form.ownerGender"></app-search-select>
+            </div>
+            <div class="row">
+              <mat-form-field appearance="outline"><mat-label>Contact Number</mat-label>
+                <input matInput [(ngModel)]="form.contactNumber" /></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Alternate Number</mat-label>
+                <input matInput [(ngModel)]="form.alternateNumber" /></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Email Address</mat-label>
+                <input matInput type="email" [(ngModel)]="form.email" /></mat-form-field>
+            </div>
+            <div class="row">
+              <mat-form-field appearance="outline" class="wide"><mat-label>Full Address</mat-label>
+                <textarea matInput rows="2" [(ngModel)]="form.fullAddress"></textarea></mat-form-field>
+            </div>
+            <div class="row">
+              <mat-form-field appearance="outline"><mat-label>City</mat-label>
+                <input matInput [(ngModel)]="form.city" /></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>State</mat-label>
+                <input matInput [(ngModel)]="form.state" /></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Pincode</mat-label>
+                <input matInput [(ngModel)]="form.pincode" /></mat-form-field>
+            </div>
+            <div class="row">
+              <mat-form-field appearance="outline"><mat-label>Occupation / Business Background</mat-label>
+                <input matInput [(ngModel)]="form.occupation" /></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Educational Qualification</mat-label>
+                <input matInput [(ngModel)]="form.educationalQualification" /></mat-form-field>
+            </div>
+            <h4 class="sub">Zone location</h4>
+            <div class="row">
+              <app-location-picker [(district)]="form.district" [(taluk)]="form.taluk"
+                [(gramPanchayat)]="form.gramPanchayat"></app-location-picker>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- 3: KYC & Documents -->
+        <mat-tab label="KYC & Documents">
+          <div class="tab">
+            <div class="row">
+              <mat-form-field appearance="outline"><mat-label>Aadhaar Card Number</mat-label>
+                <input matInput [(ngModel)]="form.aadhaarNumber" /></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>PAN Number</mat-label>
+                <input matInput [(ngModel)]="form.panNumber" /></mat-form-field>
+            </div>
+            <div class="row">
+              <mat-form-field appearance="outline" class="wide"><mat-label>Bank Account Details</mat-label>
+                <input matInput [(ngModel)]="form.bankAccountDetails" placeholder="A/c no · IFSC · Bank · Branch" /></mat-form-field>
+            </div>
+            <h4 class="sub">Upload documents (photos / copies, max 2 MB each)</h4>
+            <div class="docs">
+              <div class="doc" *ngFor="let slot of docSlots">
+                <div class="doc-label">{{ slot.label }}</div>
+                <div class="doc-pick">
+                  <button mat-stroked-button type="button" (click)="picker.click()">
+                    <mat-icon>image</mat-icon> Choose file</button>
+                  <input #picker type="file" hidden accept="image/*,.pdf" (change)="onFile(slot.type, $event)" />
+                  <span class="doc-name" [class.has]="selectedName(slot.type)">
+                    {{ selectedName(slot.type) || existingDocName(slot.type) || 'No file chosen' }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- 4: Business Fit -->
+        <mat-tab label="Business Fit">
+          <div class="tab">
+            <div class="row">
+              <app-search-select label="Investment Capacity (₹)" [options]="investments"
+                [(value)]="form.investmentCapacity"></app-search-select>
+              <mat-form-field appearance="outline"><mat-label>Preferred Location for Franchise</mat-label>
+                <input matInput [(ngModel)]="form.preferredLocation" /></mat-form-field>
+            </div>
+            <div class="row">
+              <app-search-select label="Own or Rent the proposed space?" [options]="ownRent"
+                [(value)]="form.spaceOwnership"></app-search-select>
+              <mat-form-field appearance="outline"><mat-label>Space Available (sq.ft)</mat-label>
+                <input matInput [(ngModel)]="form.spaceSqft" /></mat-form-field>
+              <app-search-select label="How soon do you plan to start?" [options]="timelines"
+                [(value)]="form.startTimeline"></app-search-select>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- 5: Membership & Submit -->
+        <mat-tab label="Membership & Submit">
+          <div class="tab">
+            <h4 class="sub">Select a membership tier</h4>
+            <div class="tiers">
+              <div class="tier" *ngFor="let t of tiers" [class.sel]="form.membershipTier === t.name"
+                (click)="form.membershipTier = t.name">
+                <div class="tier-name">{{ t.name }}</div>
+                <div class="tier-amt">₹{{ t.amount | number }}</div>
+                <mat-icon *ngIf="form.membershipTier === t.name">check_circle</mat-icon>
+              </div>
+            </div>
+            <button mat-stroked-button type="button" (click)="showTerms.set(!showTerms())">
+              <mat-icon>description</mat-icon>
+              {{ showTerms() ? 'Hide' : 'View' }} Terms &amp; Conditions
+            </button>
+            <div class="terms-box" *ngIf="showTerms()"><app-terms></app-terms></div>
+            <mat-checkbox [(ngModel)]="form.tcAccepted" class="chk">
+              I have read and accept the Terms &amp; Conditions of the KP-MSYEP franchise programme.
+            </mat-checkbox>
+            <p class="note-pay"><mat-icon>info</mat-icon>
+              Signup payment &amp; WhatsApp/activation email are pending gateway integration —
+              for now the franchise is saved as <b>PENDING</b>.</p>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+
+      <div class="form-actions">
+        <button mat-button (click)="editing.set(false)">Cancel</button>
+        <button mat-flat-button color="primary" (click)="save()" [disabled]="saving()">
+          {{ form.id ? 'Save' : 'Submit Sign-up' }}
+        </button>
+      </div>
+    </div>
+
+    <table mat-table [dataSource]="zones()" class="mat-elevation-z1 full">
+      <ng-container matColumnDef="code">
+        <th mat-header-cell *matHeaderCellDef>Zone Code</th>
+        <td mat-cell *matCellDef="let z"><span class="mono small">{{ z.code }}</span></td>
+      </ng-container>
+      <ng-container matColumnDef="org">
+        <th mat-header-cell *matHeaderCellDef>Organization</th>
+        <td mat-cell *matCellDef="let z">{{ z.organizationName || z.name }}</td>
+      </ng-container>
+      <ng-container matColumnDef="owner">
+        <th mat-header-cell *matHeaderCellDef>Owner</th>
+        <td mat-cell *matCellDef="let z">{{ z.ownerName }}</td>
+      </ng-container>
+      <ng-container matColumnDef="tier">
+        <th mat-header-cell *matHeaderCellDef>Membership</th>
+        <td mat-cell *matCellDef="let z">{{ z.membershipTier }}</td>
+      </ng-container>
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let z"><span class="status" [class.active]="z.status==='ACTIVE'">{{ z.status }}</span></td>
+      </ng-container>
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let z">
+          <button mat-icon-button (click)="edit(z)"><mat-icon>edit</mat-icon></button>
+          <button mat-icon-button color="warn" (click)="remove(z)"><mat-icon>delete</mat-icon></button>
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="cols"></tr>
+      <tr mat-row *matRowDef="let row; columns: cols"></tr>
+    </table>
+    <p *ngIf="!zones().length" class="empty">No franchises yet.</p>
+  

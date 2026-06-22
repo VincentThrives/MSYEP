@@ -18,28 +18,8 @@ import { SearchSelectComponent } from './search-select.component';
   selector: 'app-location-picker',
   standalone: true,
   imports: [CommonModule, MatFormFieldModule, MatInputModule, SearchSelectComponent],
-  template: `
-    <app-search-select [label]="districtLabel()" [options]="districts()"
-      [value]="district()" (valueChange)="onDistrict($event)"></app-search-select>
-
-    <app-search-select [label]="talukLabel()" [options]="taluks()" [disabled]="!district()"
-      [value]="taluk()" (valueChange)="onTaluk($event)"></app-search-select>
-
-    <app-search-select *ngIf="gps().length; else gpFree" [label]="gpLabel()" [options]="gps()"
-      [disabled]="!taluk()" [value]="gramPanchayat()" (valueChange)="onGp($event)"></app-search-select>
-    <ng-template #gpFree>
-      <mat-form-field appearance="outline">
-        <mat-label>{{ gpLabel() }}</mat-label>
-        <input matInput [value]="gramPanchayat() || ''" [disabled]="!taluk()"
-          (input)="onGp($any($event.target).value)" placeholder="Type, or import the GP master" />
-        <mat-hint *ngIf="taluk()">No GP master loaded for this taluk yet</mat-hint>
-      </mat-form-field>
-    </ng-template>
-  `,
-  styles: [`
-    :host { display: contents; }
-    mat-form-field { flex: 1; min-width: 200px; }
-  `],
+  templateUrl: './location-picker.component.html',
+  styleUrl: './location-picker.component.scss',
 })
 export class LocationPickerComponent implements OnInit {
   private loc = inject(LocationService);

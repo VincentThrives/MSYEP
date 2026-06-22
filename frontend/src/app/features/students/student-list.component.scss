@@ -1,0 +1,8 @@
+    .head { display: flex; justify-content: space-between; align-items: center; }
+    .form-panel { background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 16px; margin: 16px 0; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .row mat-form-field { flex: 1; min-width: 180px; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .full { width: 100%; margin-top: 12px; }
+    .empty { color: #999; margin-top: 16px; }
+  

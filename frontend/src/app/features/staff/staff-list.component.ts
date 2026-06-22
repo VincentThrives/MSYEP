@@ -21,85 +21,8 @@ import { SearchSelectComponent } from '../../shared/search-select.component';
     MatFormFieldModule, MatInputModule, MatSnackBarModule,
     LocationPickerComponent, SearchSelectComponent,
   ],
-  template: `
-    <div class="head">
-      <h1>Staff Management</h1>
-      <button mat-flat-button color="primary" (click)="newStaff()">
-        <mat-icon>person_add</mat-icon> Add Staff
-      </button>
-    </div>
-
-    <div class="form-panel" *ngIf="editing()">
-      <h3>{{ form.id ? 'Edit' : 'Add' }} Staff</h3>
-      <div class="row">
-        <mat-form-field appearance="outline"><mat-label>Name</mat-label>
-          <input matInput [(ngModel)]="form.name" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Designation</mat-label>
-          <input matInput [(ngModel)]="form.designation" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Phone</mat-label>
-          <input matInput [(ngModel)]="form.phone" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Email</mat-label>
-          <input matInput [(ngModel)]="form.email" /></mat-form-field>
-      </div>
-      <div class="row">
-        <app-search-select label="Zone (University)" [options]="zones()" valueKey="id"
-          labelKey="name" [emptyOption]="true" [(value)]="form.zoneId"></app-search-select>
-        <app-search-select label="Center (College)" [options]="centers()" valueKey="id"
-          labelKey="name" [emptyOption]="true" [(value)]="form.centerId"></app-search-select>
-      </div>
-      <div class="row">
-        <app-location-picker
-          [(district)]="form.district" [(taluk)]="form.taluk"
-          [(gramPanchayat)]="form.gramPanchayat"></app-location-picker>
-      </div>
-      <div class="form-actions">
-        <button mat-button (click)="editing.set(false)">Cancel</button>
-        <button mat-flat-button color="primary" (click)="save()">Save</button>
-      </div>
-    </div>
-
-    <table mat-table [dataSource]="staff()" class="mat-elevation-z1 full">
-      <ng-container matColumnDef="name">
-        <th mat-header-cell *matHeaderCellDef>Name</th>
-        <td mat-cell *matCellDef="let s">{{ s.name }}</td>
-      </ng-container>
-      <ng-container matColumnDef="designation">
-        <th mat-header-cell *matHeaderCellDef>Designation</th>
-        <td mat-cell *matCellDef="let s">{{ s.designation }}</td>
-      </ng-container>
-      <ng-container matColumnDef="phone">
-        <th mat-header-cell *matHeaderCellDef>Phone</th>
-        <td mat-cell *matCellDef="let s">{{ s.phone }}</td>
-      </ng-container>
-      <ng-container matColumnDef="zone">
-        <th mat-header-cell *matHeaderCellDef>Zone</th>
-        <td mat-cell *matCellDef="let s">{{ zoneName(s.zoneId) }}</td>
-      </ng-container>
-      <ng-container matColumnDef="district">
-        <th mat-header-cell *matHeaderCellDef>District</th>
-        <td mat-cell *matCellDef="let s">{{ s.district }}</td>
-      </ng-container>
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef>Actions</th>
-        <td mat-cell *matCellDef="let s">
-          <button mat-icon-button (click)="edit(s)"><mat-icon>edit</mat-icon></button>
-          <button mat-icon-button color="warn" (click)="remove(s)"><mat-icon>delete</mat-icon></button>
-        </td>
-      </ng-container>
-      <tr mat-header-row *matHeaderRowDef="cols"></tr>
-      <tr mat-row *matRowDef="let row; columns: cols"></tr>
-    </table>
-    <p *ngIf="!staff().length" class="empty">No staff yet.</p>
-  `,
-  styles: [`
-    .head { display: flex; justify-content: space-between; align-items: center; }
-    .form-panel { background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 16px; margin: 16px 0; }
-    .row { display: flex; gap: 12px; flex-wrap: wrap; }
-    .row mat-form-field { flex: 1; min-width: 180px; }
-    .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
-    .full { width: 100%; margin-top: 12px; }
-    .empty { color: #999; margin-top: 16px; }
-  `],
+  templateUrl: './staff-list.component.html',
+  styleUrl: './staff-list.component.scss',
 })
 export class StaffListComponent {
   private data = inject(DataService);

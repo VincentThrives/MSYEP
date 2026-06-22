@@ -1,0 +1,26 @@
+    <div class="wrap">
+      <div class="card">
+        <div class="badge"><mat-icon>school</mat-icon></div>
+        <div class="logo">MSYEP</div>
+        <div class="tag">Yukta Kaushalya Tarabethi</div>
+        <mat-progress-bar *ngIf="loading()" mode="indeterminate" class="bar"></mat-progress-bar>
+        <form (ngSubmit)="submit()">
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Email</mat-label>
+            <mat-icon matPrefix>mail</mat-icon>
+            <input matInput type="email" name="email" [(ngModel)]="email" required autocomplete="username" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Password</mat-label>
+            <mat-icon matPrefix>lock</mat-icon>
+            <input matInput type="password" name="password" [(ngModel)]="password" required autocomplete="current-password" />
+          </mat-form-field>
+          <p class="error" *ngIf="error()">{{ error() }}</p>
+          <button mat-flat-button class="full login-btn" type="submit" [disabled]="loading()">
+            <mat-icon>login</mat-icon> Sign in
+          </button>
+        </form>
+        <div class="hint">Super Admin · Admin · Zone · Center · Finance · Student</div>
+      </div>
+    </div>
+  

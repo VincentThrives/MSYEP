@@ -1,0 +1,87 @@
+    <h1>Finance Wing — Student FW Documents</h1>
+
+    <div class="filters">
+      <app-location-picker
+        [district]="filter.district" (districtChange)="filter.district = $event; fetch()"
+        [taluk]="filter.taluk" (talukChange)="filter.taluk = $event; fetch()"
+        [gramPanchayat]="filter.gramPanchayat"
+        (gramPanchayatChange)="filter.gramPanchayat = $event; onGpChange()"></app-location-picker>
+      <app-search-select label="Center" [options]="centers()" valueKey="id" labelKey="name"
+        [emptyOption]="true" emptyLabel="All" [value]="filter.centerId"
+        (valueChange)="filter.centerId = $event; fetch()"></app-search-select>
+      <button mat-stroked-button (click)="clear()"><mat-icon>clear</mat-icon> Clear</button>
+    </div>
+
+    <div class="gp-email" *ngIf="filter.gramPanchayat">
+      <mat-icon>mail</mat-icon>
+      <span>GP email auto-loaded: <strong>{{ gpEmail() || '— not mapped —' }}</strong></span>
+    </div>
+
+    <div class="bulk" *ngIf="selectedIds().length">
+      {{ selectedIds().length }} selected
+      <button mat-flat-button color="primary" (click)="sendBulk()">
+        <mat-icon>send</mat-icon> Send mail to GP for selected
+      </button>
+    </div>
+
+    <table mat-table [dataSource]="rows()" class="mat-elevation-z1 full">
+      <ng-container matColumnDef="select">
+        <th mat-header-cell *matHeaderCellDef>
+          <mat-checkbox [checked]="allSelected()" [indeterminate]="someSelected()"
+            (change)="toggleAll($event.checked)"></mat-checkbox>
+        </th>
+        <td mat-cell *matCellDef="let r">
+          <mat-checkbox [checked]="selected.has(r.studentId)"
+            (change)="toggleOne(r.studentId, $event.checked)"></mat-checkbox>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="serialNo">
+        <th mat-header-cell *matHeaderCellDef>#</th>
+        <td mat-cell *matCellDef="let r">{{ r.serialNo }}</td>
+      </ng-container>
+      <ng-container matColumnDef="studentName">
+        <th mat-header-cell *matHeaderCellDef>Student Name</th>
+        <td mat-cell *matCellDef="let r">{{ r.studentName }}</td>
+      </ng-container>
+      <ng-container matColumnDef="district">
+        <th mat-header-cell *matHeaderCellDef>District</th>
+        <td mat-cell *matCellDef="let r">{{ r.district }}</td>
+      </ng-container>
+      <ng-container matColumnDef="taluk">
+        <th mat-header-cell *matHeaderCellDef>Taluk</th>
+        <td mat-cell *matCellDef="let r">{{ r.taluk }}</td>
+      </ng-container>
+      <ng-container matColumnDef="gramPanchayat">
+        <th mat-header-cell *matHeaderCellDef>Gram Panchayat</th>
+        <td mat-cell *matCellDef="let r">{{ r.gramPanchayat }}</td>
+      </ng-container>
+      <ng-container matColumnDef="centerName">
+        <th mat-header-cell *matHeaderCellDef>Center</th>
+        <td mat-cell *matCellDef="let r">{{ r.centerName }}</td>
+      </ng-container>
+      <ng-container matColumnDef="docs">
+        <th mat-header-cell *matHeaderCellDef>View / Download</th>
+        <td mat-cell *matCellDef="let r">
+          <button mat-icon-button [disabled]="!r.documentCount"
+            matTooltip="{{ r.documentCount }} document(s)">
+            <mat-icon>{{ r.documentCount ? 'download' : 'block' }}</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="send">
+        <th mat-header-cell *matHeaderCellDef>Send Mail</th>
+        <td mat-cell *matCellDef="let r">
+          <button mat-icon-button color="primary"
+            matTooltip="Send to GP: {{ r.gramPanchayatEmail || 'not mapped' }}"
+            [disabled]="!r.gramPanchayatEmail" (click)="sendOne(r)">
+            <mat-icon>send</mat-icon>
+          </button>
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="cols"></tr>
+      <tr mat-row *matRowDef="let row; columns: cols"></tr>
+    </table>
+    <p *ngIf="!rows().length" class="empty">
+      No students for the selected filters. Choose Taluk / District / Gram Panchayat / Center above.
+    </p>
+  

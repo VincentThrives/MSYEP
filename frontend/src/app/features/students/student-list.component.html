@@ -1,0 +1,67 @@
+    <div class="head">
+      <h1>Students</h1>
+      <button mat-flat-button color="primary" (click)="newStudent()">
+        <mat-icon>add</mat-icon> Add Student
+      </button>
+    </div>
+
+    <div class="form-panel" *ngIf="editing()">
+      <h3>{{ form.id ? 'Edit' : 'Add' }} Student</h3>
+      <div class="row">
+        <mat-form-field appearance="outline"><mat-label>Name</mat-label>
+          <input matInput [(ngModel)]="form.name" /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Phone</mat-label>
+          <input matInput [(ngModel)]="form.phone" /></mat-form-field>
+        <mat-form-field appearance="outline"><mat-label>Email</mat-label>
+          <input matInput [(ngModel)]="form.email" /></mat-form-field>
+        <app-search-select label="Course" [options]="courses"
+          [(value)]="form.course"></app-search-select>
+      </div>
+      <div class="row">
+        <app-search-select label="Center" [options]="centers()" valueKey="id"
+          labelKey="name" [(value)]="form.centerId"></app-search-select>
+      </div>
+      <div class="row">
+        <app-location-picker
+          [(district)]="form.district" [(taluk)]="form.taluk"
+          [(gramPanchayat)]="form.gramPanchayat"></app-location-picker>
+      </div>
+      <div class="form-actions">
+        <button mat-button (click)="editing.set(false)">Cancel</button>
+        <button mat-flat-button color="primary" (click)="save()">Save</button>
+      </div>
+    </div>
+
+    <table mat-table [dataSource]="students()" class="mat-elevation-z1 full">
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>Name</th>
+        <td mat-cell *matCellDef="let s">{{ s.name }}</td>
+      </ng-container>
+      <ng-container matColumnDef="course">
+        <th mat-header-cell *matHeaderCellDef>Course</th>
+        <td mat-cell *matCellDef="let s">{{ s.course }}</td>
+      </ng-container>
+      <ng-container matColumnDef="district">
+        <th mat-header-cell *matHeaderCellDef>District</th>
+        <td mat-cell *matCellDef="let s">{{ s.district }}</td>
+      </ng-container>
+      <ng-container matColumnDef="gp">
+        <th mat-header-cell *matHeaderCellDef>Gram Panchayat</th>
+        <td mat-cell *matCellDef="let s">{{ s.gramPanchayat }}</td>
+      </ng-container>
+      <ng-container matColumnDef="phone">
+        <th mat-header-cell *matHeaderCellDef>Phone</th>
+        <td mat-cell *matCellDef="let s">{{ s.phone }}</td>
+      </ng-container>
+      <ng-container matColumnDef="actions">
+        <th mat-header-cell *matHeaderCellDef>Actions</th>
+        <td mat-cell *matCellDef="let s">
+          <button mat-icon-button (click)="edit(s)"><mat-icon>edit</mat-icon></button>
+          <button mat-icon-button color="warn" (click)="remove(s)"><mat-icon>delete</mat-icon></button>
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="cols"></tr>
+      <tr mat-row *matRowDef="let row; columns: cols"></tr>
+    </table>
+    <p *ngIf="!students().length" class="empty">No students yet.</p>
+  

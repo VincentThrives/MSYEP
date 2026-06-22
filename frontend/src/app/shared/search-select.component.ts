@@ -22,25 +22,8 @@ import { NgxMatSelectSearchModule } from 'ngx-mat-select-search';
     CommonModule, ReactiveFormsModule, MatFormFieldModule, MatSelectModule,
     MatInputModule, NgxMatSelectSearchModule,
   ],
-  template: `
-    <mat-form-field appearance="outline">
-      <mat-label>{{ label() }}</mat-label>
-      <mat-select [value]="value()" (selectionChange)="value.set($event.value)" [disabled]="disabled()">
-        <mat-select-trigger>{{ displayLabel() }}</mat-select-trigger>
-        <mat-option>
-          <ngx-mat-select-search [formControl]="filterCtrl"
-            [placeholderLabel]="'Search ' + label().toLowerCase() + '…'"
-            noEntriesFoundLabel="No match"></ngx-mat-select-search>
-        </mat-option>
-        <mat-option *ngIf="emptyOption()" [value]="undefined">{{ emptyLabel() }}</mat-option>
-        <mat-option *ngFor="let o of filtered()" [value]="optVal(o)">{{ optLabel(o) }}</mat-option>
-      </mat-select>
-    </mat-form-field>
-  `,
-  styles: [`
-    :host { display: contents; }
-    mat-form-field { flex: 1; min-width: 200px; }
-  `],
+  templateUrl: './search-select.component.html',
+  styleUrl: './search-select.component.scss',
 })
 export class SearchSelectComponent {
   private destroyRef = inject(DestroyRef);

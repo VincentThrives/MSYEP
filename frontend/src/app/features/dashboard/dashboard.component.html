@@ -1,0 +1,29 @@
+    <div class="hero">
+      <div>
+        <div class="hi">{{ greeting() }} 👋</div>
+        <div class="sub">MSYEP · Yukta Kaushalya Tarabethi — here's your overview</div>
+      </div>
+    </div>
+    <div class="grid">
+      <div class="stat card-green" routerLink="/app/zones">
+        <mat-icon>public</mat-icon>
+        <div class="num">{{ counts().zones }}</div>
+        <div class="lbl">Zones · Universities</div>
+      </div>
+      <div class="stat card-gold" routerLink="/app/centers">
+        <mat-icon>school</mat-icon>
+        <div class="num">{{ counts().centers }}</div>
+        <div class="lbl">Centers · Colleges</div>
+      </div>
+      <div class="stat card-orange" routerLink="/app/students">
+        <mat-icon>groups</mat-icon>
+        <div class="num">{{ counts().students }}</div>
+        <div class="lbl">Students</div>
+      </div>
+      <div class="stat card-teal" routerLink="/app/finance">
+        <mat-icon>account_balance</mat-icon>
+        <div class="num">FW</div>
+        <div class="lbl">Finance Wing</div>
+      </div>
+    </div>
+  

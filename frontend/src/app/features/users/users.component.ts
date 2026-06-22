@@ -22,68 +22,8 @@ const ROLES: Role[] = ['ADMIN', 'ZONE', 'CENTER', 'STAFF', 'FINANCE', 'STUDENT']
     CommonModule, FormsModule, MatTableModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule, SearchSelectComponent,
   ],
-  template: `
-    <div class="head">
-      <h1>Logins</h1>
-      <button mat-flat-button color="primary" (click)="editing.set(!editing())">
-        <mat-icon>person_add</mat-icon> Create Login
-      </button>
-    </div>
-
-    <div class="form-panel" *ngIf="editing()">
-      <div class="row">
-        <mat-form-field appearance="outline"><mat-label>Name</mat-label>
-          <input matInput [(ngModel)]="form.name" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Email</mat-label>
-          <input matInput [(ngModel)]="form.email" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Password</mat-label>
-          <input matInput [(ngModel)]="form.password" /></mat-form-field>
-        <app-search-select label="Role" [options]="roles"
-          [(value)]="form.role"></app-search-select>
-      </div>
-      <div class="row">
-        <app-search-select *ngIf="form.role === 'ZONE'" label="Zone" [options]="zones()"
-          valueKey="id" labelKey="name" [(value)]="form.zoneId"></app-search-select>
-        <app-search-select *ngIf="form.role === 'CENTER'" label="Center" [options]="centers()"
-          valueKey="id" labelKey="name" [(value)]="form.centerId"></app-search-select>
-      </div>
-      <div class="form-actions">
-        <button mat-button (click)="editing.set(false)">Cancel</button>
-        <button mat-flat-button color="primary" (click)="save()">Create</button>
-      </div>
-    </div>
-
-    <table mat-table [dataSource]="users()" class="mat-elevation-z1 full">
-      <ng-container matColumnDef="name">
-        <th mat-header-cell *matHeaderCellDef>Name</th>
-        <td mat-cell *matCellDef="let u">{{ u.name }}</td>
-      </ng-container>
-      <ng-container matColumnDef="email">
-        <th mat-header-cell *matHeaderCellDef>Email</th>
-        <td mat-cell *matCellDef="let u">{{ u.email }}</td>
-      </ng-container>
-      <ng-container matColumnDef="role">
-        <th mat-header-cell *matHeaderCellDef>Role</th>
-        <td mat-cell *matCellDef="let u">{{ u.role }}</td>
-      </ng-container>
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef></th>
-        <td mat-cell *matCellDef="let u">
-          <button mat-icon-button color="warn" (click)="remove(u)"><mat-icon>delete</mat-icon></button>
-        </td>
-      </ng-container>
-      <tr mat-header-row *matHeaderRowDef="cols"></tr>
-      <tr mat-row *matRowDef="let row; columns: cols"></tr>
-    </table>
-  `,
-  styles: [`
-    .head { display: flex; justify-content: space-between; align-items: center; }
-    .form-panel { background: #fff; border: 1px solid #eee; border-radius: 8px; padding: 16px; margin: 16px 0; }
-    .row { display: flex; gap: 12px; flex-wrap: wrap; }
-    .row mat-form-field { flex: 1; min-width: 180px; }
-    .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
-    .full { width: 100%; margin-top: 12px; }
-  `],
+  templateUrl: './users.component.html',
+  styleUrl: './users.component.scss',
 })
 export class UsersComponent {
   private data = inject(DataService);
