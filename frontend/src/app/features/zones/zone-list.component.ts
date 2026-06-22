@@ -14,6 +14,7 @@ import { forkJoin, of, Observable } from 'rxjs';
 import { DataService } from '../../core/data.service';
 import { SearchSelectComponent } from '../../shared/search-select.component';
 import { LocationPickerComponent } from '../../shared/location-picker.component';
+import { TermsComponent } from '../../shared/terms.component';
 import {
   GENDERS, INVESTMENT_CAPACITY, MEMBERSHIP_TIERS, OWN_RENT, START_TIMELINE,
   Zone, ZoneRegistrationResult, ZONE_DOC_SLOTS,
@@ -25,7 +26,7 @@ import {
   imports: [
     CommonModule, FormsModule, MatTableModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatCheckboxModule, MatTabsModule, MatSnackBarModule,
-    SearchSelectComponent, LocationPickerComponent,
+    SearchSelectComponent, LocationPickerComponent, TermsComponent,
   ],
   template: `
     <div class="head">
@@ -202,8 +203,13 @@ import {
                 <mat-icon *ngIf="form.membershipTier === t.name">check_circle</mat-icon>
               </div>
             </div>
+            <button mat-stroked-button type="button" (click)="showTerms.set(!showTerms())">
+              <mat-icon>description</mat-icon>
+              {{ showTerms() ? 'Hide' : 'View' }} Terms &amp; Conditions
+            </button>
+            <div class="terms-box" *ngIf="showTerms()"><app-terms></app-terms></div>
             <mat-checkbox [(ngModel)]="form.tcAccepted" class="chk">
-              I accept the Terms &amp; Conditions of the KP-MSYEP franchise programme.
+              I have read and accept the Terms &amp; Conditions of the KP-MSYEP franchise programme.
             </mat-checkbox>
             <p class="note-pay"><mat-icon>info</mat-icon>
               Signup payment &amp; WhatsApp/activation email are pending gateway integration —
@@ -283,6 +289,8 @@ import {
     .tier-name { font-weight: 800; color: #0E5132; letter-spacing: 1px; }
     .tier-amt { font-size: 22px; font-weight: 700; margin-top: 6px; }
     .tier mat-icon { position: absolute; top: 8px; right: 8px; color: #1E7A46; }
+    .terms-box { max-height: 320px; overflow-y: auto; border: 1px solid #e6e6e6; border-radius: 10px;
+      padding: 16px; margin: 12px 0; background: #fcfcfb; }
     .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
     .full { width: 100%; margin-top: 12px; } .empty { color: #999; margin-top: 16px; }
     .mono { font-family: monospace; } .small { font-size: 12px; color: #555; }
@@ -305,6 +313,7 @@ export class ZoneListComponent {
   zones = signal<Zone[]>([]);
   editing = signal(false);
   saving = signal(false);
+  showTerms = signal(false);
   result = signal<ZoneRegistrationResult | null>(null);
   form: Zone = this.blank();
   private files: Record<string, File> = {};
