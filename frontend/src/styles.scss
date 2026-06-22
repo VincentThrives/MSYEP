@@ -1,0 +1,94 @@
+/* ============================================================
+   MSYEP global theme — GOLD + GREEN brand, friendly surfaces.
+   Material base theme loaded via angular.json (azure-blue prebuilt);
+   these rules layer the brand on top.
+   ============================================================ */
+
+:root {
+  --gold:        #C9A227;
+  --gold-bright: #E8C547;
+  --gold-soft:   #F6ECC9;
+  --green:       #1E7A46;
+  --green-deep:  #0E5132;
+  --green-soft:  #E7F3EC;
+  --ink:         #21302a;
+  --brand-gradient: linear-gradient(120deg, #0E5132 0%, #1E7A46 52%, #C9A227 128%);
+}
+
+html, body { height: 100%; margin: 0; }
+body {
+  font-family: Roboto, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: var(--ink);
+  background:
+    radial-gradient(1200px 480px at 100% -10%, rgba(201,162,39,.10), transparent 60%),
+    radial-gradient(1000px 460px at -10% 0%, rgba(30,122,70,.10), transparent 60%),
+    #f5f7f4;
+}
+
+h1 { color: var(--green-deep); }
+
+/* ----- Per-portal accent colors -----
+   Each portal keeps its identity colour; gold is woven into every toolbar. */
+.theme-admin   { --portal: #1E7A46; --portal-dark: #0E5132; } /* green  */
+.theme-zone    { --portal: #ED8B1F; --portal-dark: #C25E00; } /* orange */
+.theme-center  { --portal: #D6336C; --portal-dark: #A61E4D; } /* pink   */
+.theme-student { --portal: #1E7A46; --portal-dark: #0E5132; } /* green  */
+.theme-finance { --portal: #C9A227; --portal-dark: #9A7B14; } /* gold   */
+
+/* Toolbar: portal colour flowing into gold — colourful in every portal. */
+.shell .topbar {
+  background: linear-gradient(115deg, var(--portal-dark) 0%, var(--portal) 58%, var(--gold) 125%) !important;
+  color: #fff !important;
+  box-shadow: 0 2px 10px rgba(0,0,0,.18);
+}
+.shell .topbar .brand {
+  background: linear-gradient(90deg, #fff, var(--gold-soft));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  font-weight: 800;
+}
+
+/* Sidenav + active link */
+.shell .sidenav { background: #ffffff; border-right: 1px solid #e7ece8; }
+.shell .active-link {
+  background: var(--green-soft);
+  color: var(--portal-dark) !important;
+  border-left: 4px solid var(--gold);
+  border-radius: 0 8px 8px 0;
+  font-weight: 700;
+}
+.shell .active-link .mat-icon { color: var(--portal-dark); }
+.shell .mat-mdc-list-item:hover { background: #f3f7f4; }
+
+/* Primary buttons follow the portal accent. */
+.shell .mat-mdc-unelevated-button.mat-primary,
+.mat-mdc-unelevated-button.mat-primary {
+  background-color: var(--green);
+}
+.shell .mat-mdc-unelevated-button.mat-primary:hover { background-color: var(--green-deep); }
+.shell .mat-mdc-outlined-button.mat-primary { color: var(--green); border-color: var(--green); }
+
+/* Cards — friendlier: rounded, soft shadow, subtle hover lift. */
+.shell .mat-mdc-card, .mat-mdc-card {
+  border-radius: 16px !important;
+  box-shadow: 0 4px 18px rgba(14,81,50,.08) !important;
+  border: 1px solid #eef1ee;
+}
+
+/* Tables — green-tinted header, comfy rows. */
+.shell table.mat-mdc-table {
+  border-radius: 14px; overflow: hidden;
+  box-shadow: 0 4px 18px rgba(14,81,50,.07);
+}
+.shell .mat-mdc-header-row {
+  background: linear-gradient(90deg, var(--green-soft), var(--gold-soft));
+}
+.shell .mat-mdc-header-cell { color: var(--green-deep); font-weight: 700; }
+.shell .mat-mdc-row:hover { background: #f6faf7; }
+
+/* Form fields a touch rounder. */
+.shell .mat-mdc-form-field { --mdc-outlined-text-field-focus-outline-color: var(--green); }
+
+/* Snackbar accent. */
+.mat-mdc-snack-bar-container .mdc-snackbar__surface { border-left: 4px solid var(--gold); }
+
+.full-width { width: 100%; }

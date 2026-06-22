@@ -1,0 +1,27 @@
+# ── secrets (the launcher holds your Atlas URI / mail password once edited) ──
+backend/start-msyep.cmd
+*.env
+.env
+
+# ── backend build ──
+backend/target/
+
+# ── frontend build & deps ──
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/.nx/
+
+# ── uploaded center documents (user data) ──
+uploads/
+backend/uploads/
+
+# ── logs ──
+*.log
+
+# ── IDE / OS ──
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db

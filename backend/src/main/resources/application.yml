@@ -1,0 +1,48 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: msyep
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/msyep}
+      # Fallback DB name if the Atlas URI doesn't include one in its path.
+      database: ${MONGODB_DB:msyep}
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 25MB
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:change-me-in-prod-this-must-be-at-least-256-bits-long-secret-key-value}
+    access-token-ttl-minutes: 120
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:4200,http://localhost:4205}
+  uploads-dir: ${UPLOADS_DIR:uploads}
+  # Seed a Super Admin on first boot if no users exist.
+  seed:
+    super-admin-email: ${SEED_SUPERADMIN_EMAIL:superadmin@msyep.in}
+    super-admin-password: ${SEED_SUPERADMIN_PASSWORD:Admin@12345}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  health:
+    # Mail SMTP isn't probed for health — it's optional until credentials are set.
+    mail:
+      enabled: false
