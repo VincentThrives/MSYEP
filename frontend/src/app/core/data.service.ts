@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
-import { Center, CenterRegistrationResult, FinanceRow, GramPanchayat, Staff, Student, Zone } from './models';
+import { Center, CenterRegistrationResult, EntranceResult, EntranceStart, FinanceRow, GramPanchayat, Staff, Student, Zone } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class DataService {
@@ -57,6 +57,20 @@ export class DataService {
   createStaff = (s: Staff) => this.api.post<Staff>('/staff', s);
   updateStaff = (id: string, s: Staff) => this.api.put<Staff>(`/staff/${id}`, s);
   deleteStaff = (id: string) => this.api.delete<void>(`/staff/${id}`);
+
+  // Entrance test
+  entranceStart = (studentId: string, selfie: File) => {
+    const form = new FormData();
+    form.append('studentId', studentId);
+    form.append('selfie', selfie);
+    return this.api.post<EntranceStart>('/entrance-test/start', form);
+  };
+  entranceSubmit = (attemptId: string, answers: Record<string, string>) =>
+    this.api.post<EntranceResult>(`/entrance-test/${attemptId}/submit`, { answers });
+  entranceResultPdf = (attemptId: string) =>
+    this.api.blob(`/entrance-test/${attemptId}/result-pdf`);
+  entranceAttempts = (studentId: string) =>
+    this.api.get<any[]>('/entrance-test/attempts', { studentId });
 
   // Users
   users = () => this.api.get<any[]>('/users');

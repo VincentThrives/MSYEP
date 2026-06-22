@@ -54,6 +54,11 @@ export const routes: Routes = [
           import('./features/staff/staff-list.component').then((m) => m.StaffListComponent),
       },
       {
+        path: 'entrance-test',
+        loadComponent: () =>
+          import('./features/entrance/entrance-test.component').then((m) => m.EntranceTestComponent),
+      },
+      {
         path: 'kit',
         data: { title: 'KPMSYEP Kit Details' },
         loadComponent: () =>

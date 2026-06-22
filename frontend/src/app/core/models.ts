@@ -125,6 +125,33 @@ export interface CenterRegistrationResult {
   emailNote: string;
 }
 
+// ----- Entrance test -----
+export interface EntranceQuestion {
+  questionId: string;
+  question: string;
+  options: string[];
+}
+export interface EntranceStart {
+  attemptId: string;
+  durationMinutes: number;
+  startedAt: string;
+  questions: EntranceQuestion[];
+}
+export interface EntranceResultItem {
+  question: string;
+  options: string[];
+  correctAnswer: string;
+  selectedAnswer: string;
+  correct: boolean;
+}
+export interface EntranceResult {
+  attemptId: string;
+  score: number;
+  total: number;
+  passed: boolean;
+  items: EntranceResultItem[];
+}
+
 export const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',

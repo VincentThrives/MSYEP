@@ -18,6 +18,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'Zones', path: '/app/zones', icon: 'public' },
   { label: 'Centers', path: '/app/centers', icon: 'school' },
   { label: 'Students', path: '/app/students', icon: 'groups' },
+  { label: 'Entrance Test', path: '/app/entrance-test', icon: 'quiz' },
   { label: 'Staff Management', path: '/app/staff', icon: 'badge' },
   { label: 'Finance', path: '/app/finance', icon: 'account_balance' },
   { label: 'Logins', path: '/app/users', icon: 'manage_accounts' },
@@ -34,6 +35,7 @@ const ZONE_NAV: NavItem[] = [
 const CENTER_NAV: NavItem[] = [
   { label: 'Dashboard', path: '/app/dashboard', icon: 'dashboard' },
   { label: 'Students', path: '/app/students', icon: 'groups' },
+  { label: 'Entrance Test', path: '/app/entrance-test', icon: 'quiz' },
   { label: 'KPMSYEP SOW', path: '/app/sow', icon: 'description' },
   { label: 'VBSOW', path: '/app/vbsow', icon: 'view_module' },
   { label: 'SFOW Submissions', path: '/app/sfow', icon: 'assignment_turned_in' },
@@ -42,6 +44,7 @@ const CENTER_NAV: NavItem[] = [
 
 const STUDENT_NAV: NavItem[] = [
   { label: 'My Profile', path: '/app/students', icon: 'person' },
+  { label: 'Entrance Test', path: '/app/entrance-test', icon: 'quiz' },
 ];
 
 const FINANCE_NAV: NavItem[] = [
