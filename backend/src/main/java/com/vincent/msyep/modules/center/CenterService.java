@@ -48,7 +48,10 @@ public class CenterService {
         e.setName(changes.getName());
         e.setCenterType(changes.getCenterType());
         e.setCenterHeadUserId(changes.getCenterHeadUserId());
-        // code / enrollment / id are immutable once generated.
+        // code / enrollment / batchCode / id / login are immutable once generated.
+        e.setAcademicYear(changes.getAcademicYear());
+        e.setAcademicStartMonth(changes.getAcademicStartMonth());
+        e.setAcademicEndMonth(changes.getAcademicEndMonth());
         e.setZoneId(changes.getZoneId());
         e.setAddress(changes.getAddress());
         e.setLocality(changes.getLocality());
@@ -58,9 +61,27 @@ public class CenterService {
         e.setDistrict(changes.getDistrict());
         e.setTaluk(changes.getTaluk());
         e.setGramPanchayat(changes.getGramPanchayat());
-        e.setDateOfMou(changes.getDateOfMou());
-        e.setContractDuration(changes.getContractDuration());
+        e.setBatchYear(changes.getBatchYear());
         e.setPrincipalName(changes.getPrincipalName());
+        e.setPrincipalNumber(changes.getPrincipalNumber());
+        e.setUucmsCoordinatorName(changes.getUucmsCoordinatorName());
+        e.setUucmsCoordinatorNumber(changes.getUucmsCoordinatorNumber());
+        e.setScstCoordinatorName(changes.getScstCoordinatorName());
+        e.setScstCoordinatorNumber(changes.getScstCoordinatorNumber());
+        e.setPlacementCoordinatorName(changes.getPlacementCoordinatorName());
+        e.setPlacementCoordinatorPhone(changes.getPlacementCoordinatorPhone());
+        e.setOfficeNumber(changes.getOfficeNumber());
+        e.setHasWebsite(changes.isHasWebsite());
+        e.setWebsiteLink(changes.getWebsiteLink());
+        e.setCourses(changes.getCourses());
+        e.setTotalStrength(changes.getTotalStrength());
+        e.setStrengthTotal(changes.getStrengthTotal());
+        e.setStrengthSC(changes.getStrengthSC());
+        e.setStrengthST(changes.getStrengthST());
+        e.setStrengthGeneral(changes.getStrengthGeneral());
+        e.setDateOfMou(changes.getDateOfMou());
+        e.setMouEndDate(changes.getMouEndDate());
+        e.setContractDuration(changes.getContractDuration());
         e.setContactPhone(changes.getContactPhone());
         e.setActive(changes.isActive());
         e.setUpdatedAt(Instant.now());

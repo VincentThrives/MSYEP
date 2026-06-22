@@ -7,6 +7,7 @@ public record CenterRegistrationResult(
         Center center,
         String centerCode,
         String enrollmentNumber,
+        String batchCode,
         String headLoginId,
         boolean emailSent,
         String emailNote

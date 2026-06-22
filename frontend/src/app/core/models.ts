@@ -63,22 +63,53 @@ export interface Staff {
 
 export interface Center {
   id?: string;
+  // Academic & type
+  academicYear?: string;
+  academicStartMonth?: string;
+  academicEndMonth?: string;
   name: string;
   centerType?: string;
+  userId?: string;
+  password?: string;
   centerHeadUserId?: string;
+  // Allotments (auto)
   code?: string;
   enrollmentNumber?: string;
+  batchCode?: string;
+  batchYear?: string;
   registrationDate?: string;
+  // Location
   zoneId?: string;
   address?: string;
   locality?: string;
   pincode?: string;
-  contactNumber?: string;
-  email?: string;
   district?: string;
   taluk?: string;
   gramPanchayat?: string;
+  // Contacts
+  contactNumber?: string;
+  email?: string;
+  principalName?: string;
+  principalNumber?: string;
+  uucmsCoordinatorName?: string;
+  uucmsCoordinatorNumber?: string;
+  scstCoordinatorName?: string;
+  scstCoordinatorNumber?: string;
+  placementCoordinatorName?: string;
+  placementCoordinatorPhone?: string;
+  officeNumber?: string;
+  hasWebsite?: boolean;
+  websiteLink?: string;
+  // Courses
+  courses?: string[];
+  totalStrength?: number;
+  strengthTotal?: number;
+  strengthSC?: number;
+  strengthST?: number;
+  strengthGeneral?: number;
+  // MOU
   dateOfMou?: string;
+  mouEndDate?: string;
   contractDuration?: string;
   documents?: CenterDocument[];
   active?: boolean;
@@ -88,15 +119,31 @@ export interface CenterRegistrationResult {
   center: Center;
   centerCode: string;
   enrollmentNumber: string;
+  batchCode: string;
   headLoginId: string;
   emailSent: boolean;
   emailNote: string;
 }
 
-/** Center type options (editable). */
+export const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+/** Rolling academic-year range like "2025-26", centered near the current year. */
+export function academicYears(): string[] {
+  const now = new Date().getFullYear();
+  const out: string[] = [];
+  for (let y = now - 2; y <= now + 3; y++) {
+    out.push(`${y}-${String((y + 1) % 100).padStart(2, '0')}`);
+  }
+  return out;
+}
+
+/** Center type / college category options. */
 export const CENTER_TYPES = [
-  'Degree College', 'PU College', 'ITI', 'Polytechnic / Diploma',
-  'GTTC', 'Engineering College', 'Hostel', 'Other',
+  'University College', 'PUC College', 'ITI / Diploma College',
+  'VTU College', 'Social Welfare Hostel', 'GTTC College',
 ];
 
 export interface CenterDocSlot {

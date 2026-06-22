@@ -37,15 +37,19 @@ public class CenterRegistrationService {
     private final CenterRepository centers;
     private final UserRepository users;
     private final CounterService counters;
+    private final org.springframework.security.crypto.password.PasswordEncoder encoder;
     private final Optional<JavaMailSender> mailSender;
     private final String mailFrom;
 
     public CenterRegistrationService(CenterRepository centers, UserRepository users,
-                                     CounterService counters, Optional<JavaMailSender> mailSender,
+                                     CounterService counters,
+                                     org.springframework.security.crypto.password.PasswordEncoder encoder,
+                                     Optional<JavaMailSender> mailSender,
                                      @Value("${spring.mail.username:}") String mailFrom) {
         this.centers = centers;
         this.users = users;
         this.counters = counters;
+        this.encoder = encoder;
         this.mailSender = mailSender;
         this.mailFrom = mailFrom;
     }
@@ -64,48 +68,70 @@ public class CenterRegistrationService {
         long seq = counters.next("center");
         String code = String.format("CENTER-%d-%04d", year, seq);
         String enrollment = String.format("CENENR%d%07d", year, seq);
+        String batchCode = String.format("BATCH-%d-%04d", year, seq);
 
         input.setId(IdGen.cuid());
         input.setCode(code);
         input.setEnrollmentNumber(enrollment);
+        input.setBatchCode(batchCode);
         input.setRegistrationDate(LocalDate.now().toString());
+        if (!StringUtils.hasText(input.getBatchYear())) input.setBatchYear(input.getAcademicYear());
         if (input.getCreatedAt() == null) input.setCreatedAt(java.time.Instant.now());
 
-        // Link the assigned center head (existing user) to this center.
-        String headEmail = null;
-        if (StringUtils.hasText(input.getCenterHeadUserId())) {
+        // Create the CENTER login from the typed User ID + Password.
+        String loginId = null;
+        if (StringUtils.hasText(input.getUserId()) && StringUtils.hasText(input.getPassword())) {
+            String email = input.getUserId().toLowerCase().trim();
+            if (users.existsByEmail(email)) {
+                throw new IllegalArgumentException("User ID already in use: " + email);
+            }
+            users.save(User.builder()
+                    .name(input.getName())
+                    .email(email)
+                    .passwordHash(encoder.encode(input.getPassword()))
+                    .role(Role.CENTER)
+                    .centerId(input.getId())
+                    .zoneId(input.getZoneId())
+                    .active(true)
+                    .build());
+            loginId = email;
+        } else if (StringUtils.hasText(input.getCenterHeadUserId())) {
+            // Legacy: assign an existing user as head.
             User head = users.findById(input.getCenterHeadUserId()).orElse(null);
             if (head != null) {
                 head.setRole(Role.CENTER);
                 head.setCenterId(input.getId());
                 if (input.getZoneId() != null) head.setZoneId(input.getZoneId());
                 users.save(head);
-                headEmail = head.getEmail();
-                if (!StringUtils.hasText(input.getEmail())) input.setEmail(headEmail);
+                loginId = head.getEmail();
             }
         }
 
+        input.setPassword(null); // never persist the plaintext password
         Center saved = centers.save(input);
 
-        byte[] pdf = buildPdf(saved, headEmail);
+        // Deliver to the Center Mail-ID if given, else the login id.
+        String deliveryEmail = StringUtils.hasText(saved.getEmail()) ? saved.getEmail() : loginId;
+
+        byte[] pdf = buildPdf(saved, loginId);
         boolean emailSent = false;
         String note;
-        if (!StringUtils.hasText(headEmail)) {
-            note = "No center head email — PDF available to download.";
+        if (!StringUtils.hasText(deliveryEmail)) {
+            note = "No email on the center — PDF available to download.";
         } else if (mailSender.isEmpty() || !StringUtils.hasText(mailFrom)) {
             note = "Mail not configured (set MAIL_USERNAME / MAIL_PASSWORD) — PDF available to download.";
         } else {
             try {
-                sendEmail(headEmail, saved, pdf);
+                sendEmail(deliveryEmail, saved, pdf);
                 emailSent = true;
-                note = "Registration PDF emailed to " + headEmail;
+                note = "Registration PDF emailed to " + deliveryEmail;
             } catch (Exception ex) {
                 note = "Email failed: " + ex.getMessage() + " — PDF available to download.";
-                log.warn("Failed to email center registration to {}", headEmail, ex);
+                log.warn("Failed to email center registration to {}", deliveryEmail, ex);
             }
         }
 
-        return new CenterRegistrationResult(saved, code, enrollment, headEmail, emailSent, note);
+        return new CenterRegistrationResult(saved, code, enrollment, batchCode, loginId, emailSent, note);
     }
 
     public byte[] pdfFor(String id) {
@@ -128,9 +154,12 @@ public class CenterRegistrationService {
                     .setWidth(UnitValue.createPercentValue(100));
             row(table, "Center Name:", nz(c.getName()));
             row(table, "Center Type:", nz(c.getCenterType()));
+            row(table, "Academic Year:", nz(c.getAcademicYear()));
             row(table, "Center Code:", nz(c.getCode()));
+            row(table, "Batch Code:", nz(c.getBatchCode()));
             row(table, "Center Enrollment Number:", nz(c.getEnrollmentNumber()));
             row(table, "Center ID:", nz(c.getId()));
+            row(table, "Principal:", nz(c.getPrincipalName()) + "  " + nz(c.getPrincipalNumber()));
             row(table, "Registration Date:", nz(c.getRegistrationDate()));
             row(table, "Address:", nz(c.getAddress()));
             row(table, "Locality:", nz(c.getLocality()));
