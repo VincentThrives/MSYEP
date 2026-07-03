@@ -1,0 +1,61 @@
+<div class="head">
+  <h1>View Students</h1>
+  <div class="head-actions">
+    <button mat-stroked-button (click)="reset()"><mat-icon>refresh</mat-icon> Reset</button>
+    <button mat-flat-button color="primary" (click)="exportExcel()"><mat-icon>download</mat-icon> Export to Excel</button>
+  </div>
+</div>
+
+<div class="filters">
+  <app-location-picker districtLabel="District" talukLabel="Taluk" gpLabel="Gram Panchayat"
+    [(district)]="filter.district" (districtChange)="fetch()"
+    [(taluk)]="filter.taluk" (talukChange)="fetch()"
+    [(gramPanchayat)]="filter.gramPanchayat" (gramPanchayatChange)="fetch()"></app-location-picker>
+  <app-search-select label="Center" [options]="centers()" valueKey="id" labelKey="name"
+    [emptyOption]="true" emptyLabel="All Centers" [value]="filter.centerId"
+    (valueChange)="filter.centerId = $event; fetch()"></app-search-select>
+  <app-search-select label="Caste" [options]="castes" [emptyOption]="true" emptyLabel="All"
+    [value]="filter.caste" (valueChange)="filter.caste = $event; fetch()"></app-search-select>
+</div>
+
+<div class="search-row">
+  <mat-form-field appearance="outline" class="search">
+    <mat-label>Search</mat-label>
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput (input)="applySearch($any($event.target).value)" placeholder="name, reg no, email…" />
+  </mat-form-field>
+</div>
+
+<table mat-table [dataSource]="ds" class="mat-elevation-z1 full">
+  <ng-container matColumnDef="reg">
+    <th mat-header-cell *matHeaderCellDef>Reg. No</th>
+    <td mat-cell *matCellDef="let s"><span class="mono">{{ s.registerNo }}</span></td>
+  </ng-container>
+  <ng-container matColumnDef="name">
+    <th mat-header-cell *matHeaderCellDef>Student Name</th>
+    <td mat-cell *matCellDef="let s">{{ s.name }}</td>
+  </ng-container>
+  <ng-container matColumnDef="details">
+    <th mat-header-cell *matHeaderCellDef>Details</th>
+    <td mat-cell *matCellDef="let s">
+      <div class="small">Email: {{ s.email }}</div>
+      <div class="small">Phone: {{ s.phone }}</div>
+    </td>
+  </ng-container>
+  <ng-container matColumnDef="center">
+    <th mat-header-cell *matHeaderCellDef>Alloted Center</th>
+    <td mat-cell *matCellDef="let s">{{ centerName(s.centerId) || s.collegeName }}</td>
+  </ng-container>
+  <ng-container matColumnDef="status">
+    <th mat-header-cell *matHeaderCellDef>Status</th>
+    <td mat-cell *matCellDef="let s"><span class="badge" [class.ok]="s.active">{{ s.active ? 'Approved' : 'Pending' }}</span></td>
+  </ng-container>
+  <ng-container matColumnDef="view">
+    <th mat-header-cell *matHeaderCellDef>View</th>
+    <td mat-cell *matCellDef="let s"><button mat-icon-button color="primary" (click)="editStudent()"><mat-icon>edit</mat-icon></button></td>
+  </ng-container>
+  <tr mat-header-row *matHeaderRowDef="cols"></tr>
+  <tr mat-row *matRowDef="let row; columns: cols"></tr>
+</table>
+<mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" showFirstLastButtons></mat-paginator>
+<p *ngIf="!ds.data.length" class="empty">No students match the filters.</p>

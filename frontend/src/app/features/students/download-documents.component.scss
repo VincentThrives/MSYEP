@@ -1,0 +1,15 @@
+.head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+.head-actions { display: flex; gap: 10px; align-items: center; }
+.head-actions app-search-select { display: contents; }
+.head-actions :is(mat-form-field) { min-width: 180px; }
+.filters { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 12px 0; }
+.filters app-search-select, .filters app-location-picker { display: contents; }
+.filters :is(mat-form-field) { min-width: 180px; }
+.search-row { display: flex; align-items: center; gap: 18px; margin: 6px 0; }
+.search { width: 300px; max-width: 100%; }
+.full { width: 100%; }
+.mono { font-family: monospace; font-size: 13px; }
+.badge { background: #fff3cd; color: #8a6d1a; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.badge.ok { background: #e7f3ec; color: #0E5132; }
+.empty { color: #999; margin-top: 16px; }
+.note { color: #888; font-size: 12px; margin-top: 10px; }

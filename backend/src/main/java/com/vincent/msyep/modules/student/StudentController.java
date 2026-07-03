@@ -2,6 +2,10 @@ package com.vincent.msyep.modules.student;
 
 import com.vincent.msyep.common.ApiResponse;
 import com.vincent.msyep.modules.student.dto.StudentRegistrationResult;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,11 +18,53 @@ public class StudentController {
 
     private final StudentService service;
     private final StudentRegistrationService registration;
+    private final StudentExportService export;
 
-    public StudentController(StudentService service, StudentRegistrationService registration) {
+    public StudentController(StudentService service, StudentRegistrationService registration,
+                             StudentExportService export) {
         this.service = service;
         this.registration = registration;
+        this.export = export;
     }
+
+    /** Filtered list for the View Students page. */
+    @GetMapping("/filter")
+    public ApiResponse<List<Student>> filter(
+            @RequestParam(required = false) String district,
+            @RequestParam(required = false) String taluk,
+            @RequestParam(required = false) String gramPanchayat,
+            @RequestParam(required = false) String centerId,
+            @RequestParam(required = false) String caste) {
+        return ApiResponse.ok(export.filter(district, taluk, gramPanchayat, centerId, caste));
+    }
+
+    /** Export filtered students to Excel. */
+    @GetMapping("/export")
+    public ResponseEntity<ByteArrayResource> exportExcel(
+            @RequestParam(required = false) String district,
+            @RequestParam(required = false) String taluk,
+            @RequestParam(required = false) String gramPanchayat,
+            @RequestParam(required = false) String centerId,
+            @RequestParam(required = false) String caste) {
+        byte[] xlsx = export.toExcel(export.filter(district, taluk, gramPanchayat, centerId, caste));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=students.xlsx")
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(new ByteArrayResource(xlsx));
+    }
+
+    /** Combined PDF of the selected students' documents (not a zip). */
+    @PostMapping("/documents-pdf")
+    public ResponseEntity<ByteArrayResource> documentsPdf(@RequestBody DocsRequest req) {
+        byte[] pdf = export.documentsPdf(req.studentIds(), req.docType());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=student-documents.pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(new ByteArrayResource(pdf));
+    }
+
+    public record DocsRequest(List<String> studentIds, String docType) {}
 
     @GetMapping
     public ApiResponse<List<Student>> list(@RequestParam(required = false) String centerId) {

@@ -29,8 +29,13 @@ export class ApiService {
   }
 
   /** Raw blob download (PDF/Excel). */
-  blob(path: string): Observable<Blob> {
-    return this.http.get(this.base + path, { responseType: 'blob' });
+  blob(path: string, params?: Record<string, string | number | undefined>): Observable<Blob> {
+    return this.http.get(this.base + path, { params: this.toParams(params), responseType: 'blob' });
+  }
+
+  /** POST that returns a blob (e.g. generated PDF). */
+  blobPost(path: string, body: unknown): Observable<Blob> {
+    return this.http.post(this.base + path, body, { responseType: 'blob' });
   }
 
   /** Multipart upload. */

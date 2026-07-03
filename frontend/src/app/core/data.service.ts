@@ -51,6 +51,10 @@ export class DataService {
     form.append('file', file);
     return this.api.post<Student>(`/students/${id}/documents`, form);
   };
+  studentsFilter = (f: Record<string, string | undefined>) => this.api.get<Student[]>('/students/filter', f);
+  studentsExportExcel = (f: Record<string, string | undefined>) => this.api.blob('/students/export', f);
+  studentDocumentsPdf = (studentIds: string[], docType?: string) =>
+    this.api.blobPost('/students/documents-pdf', { studentIds, docType });
 
   // Finance
   financeStudents = (f: {

@@ -1,0 +1,60 @@
+<div class="head">
+  <h1>Download Student Documents</h1>
+  <div class="head-actions">
+    <app-search-select label="Doc Type" [options]="docTypeOptions" valueKey="value" labelKey="label"
+      [(value)]="docType"></app-search-select>
+    <button mat-stroked-button (click)="reset()"><mat-icon>refresh</mat-icon> Reset</button>
+    <button mat-flat-button color="primary" [disabled]="busy() || !selectedCount()" (click)="download()">
+      <mat-icon>download</mat-icon> Download ({{ selectedCount() }})
+    </button>
+  </div>
+</div>
+
+<div class="filters">
+  <app-location-picker districtLabel="District" talukLabel="Taluk" gpLabel="Gram Panchayat"
+    [(district)]="filter.district" (districtChange)="fetch()"
+    [(taluk)]="filter.taluk" (talukChange)="fetch()"
+    [(gramPanchayat)]="filter.gramPanchayat" (gramPanchayatChange)="fetch()"></app-location-picker>
+  <app-search-select label="Center" [options]="centers()" valueKey="id" labelKey="name"
+    [emptyOption]="true" emptyLabel="All Centers" [value]="filter.centerId"
+    (valueChange)="filter.centerId = $event; fetch()"></app-search-select>
+</div>
+
+<div class="search-row">
+  <mat-checkbox [checked]="allSelected()" (change)="toggleAll($event.checked)">Select all</mat-checkbox>
+  <mat-form-field appearance="outline" class="search">
+    <mat-label>Search</mat-label>
+    <mat-icon matPrefix>search</mat-icon>
+    <input matInput (input)="applySearch($any($event.target).value)" placeholder="name, reg no…" />
+  </mat-form-field>
+</div>
+
+<table mat-table [dataSource]="ds" class="mat-elevation-z1 full">
+  <ng-container matColumnDef="select">
+    <th mat-header-cell *matHeaderCellDef></th>
+    <td mat-cell *matCellDef="let s">
+      <mat-checkbox [checked]="selected.has(s.id)" (change)="toggleOne(s.id, $event.checked)"></mat-checkbox>
+    </td>
+  </ng-container>
+  <ng-container matColumnDef="reg">
+    <th mat-header-cell *matHeaderCellDef>Reg. No</th>
+    <td mat-cell *matCellDef="let s"><span class="mono">{{ s.registerNo }}</span></td>
+  </ng-container>
+  <ng-container matColumnDef="name">
+    <th mat-header-cell *matHeaderCellDef>Student Name</th>
+    <td mat-cell *matCellDef="let s">{{ s.name }}</td>
+  </ng-container>
+  <ng-container matColumnDef="center">
+    <th mat-header-cell *matHeaderCellDef>Alloted Center</th>
+    <td mat-cell *matCellDef="let s">{{ centerName(s.centerId) || s.collegeName }}</td>
+  </ng-container>
+  <ng-container matColumnDef="status">
+    <th mat-header-cell *matHeaderCellDef>Status</th>
+    <td mat-cell *matCellDef="let s"><span class="badge" [class.ok]="s.active">{{ s.active ? 'Approved' : 'Pending' }}</span></td>
+  </ng-container>
+  <tr mat-header-row *matHeaderRowDef="cols"></tr>
+  <tr mat-row *matRowDef="let row; columns: cols"></tr>
+</table>
+<mat-paginator [pageSizeOptions]="[10, 25, 50, 100]" showFirstLastButtons></mat-paginator>
+<p *ngIf="!ds.data.length" class="empty">No students match the filters.</p>
+<p class="note">Selected students' documents download as a single combined PDF (not a zip).</p>

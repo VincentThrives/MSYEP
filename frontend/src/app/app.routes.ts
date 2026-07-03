@@ -36,6 +36,16 @@ export const routes: Routes = [
           import('./features/students/student-list.component').then((m) => m.StudentListComponent),
       },
       {
+        path: 'students/view',
+        loadComponent: () =>
+          import('./features/students/view-students.component').then((m) => m.ViewStudentsComponent),
+      },
+      {
+        path: 'students/download-docs',
+        loadComponent: () =>
+          import('./features/students/download-documents.component').then((m) => m.DownloadDocumentsComponent),
+      },
+      {
         path: 'finance',
         canActivate: [roleGuard('ADMIN', 'FINANCE', 'ZONE', 'CENTER')],
         loadComponent: () =>
