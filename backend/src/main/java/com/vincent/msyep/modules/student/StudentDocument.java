@@ -4,13 +4,15 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/** A document attached to a student (FW/finance docs, certificates, etc.). */
+/** An uploaded student document (photo, Aadhaar, PAN, marks cards, fee receipt, caste cert). */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class StudentDocument {
-    private String label;
-    /** Storage path or URL where the file lives. */
-    private String url;
     private String type;
+    private String label;
+    private String filename;
+    private long size;
+    /** Stored relative path on disk. */
+    private String path;
 }

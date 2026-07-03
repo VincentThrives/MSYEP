@@ -23,27 +23,63 @@ public class Student {
     @Id
     private String id;
 
+    // ----- Account -----
     private String name;
-    private String phone;
     private String email;
+    private String phone;
+    /** Login username for the student. */
+    private String userId;
+    /** Plaintext password — used only to create the login, then cleared. */
+    private transient String password;
 
-    /** Course/degree: PU, SSLC, ITI, DIPLOMA, DEGREE. */
+    /** Course/degree (legacy). */
     private String course;
+
+    // ----- Personal details -----
+    private String gender;
+    private String dateOfBirth;
+    private String caste;
+
+    // ----- Education & job details -----
+    private String educationalQualification;
+    private String admissionYear;
+    private String interestedInternship;      // Yes / No
+    private String technicalSkills;           // comma separated
+    @Builder.Default
+    private List<String> hobbies = new ArrayList<>();
+    @Builder.Default
+    private List<String> interestedCourses = new ArrayList<>();
+    private String careerGoal;
 
     @Indexed
     private String centerId;
     @Indexed
     private String zoneId;
 
-    // Geography — used by the finance wing filters.
+    // ----- Address (as per Aadhaar) -----
+    private String state;
     @Indexed
     private String district;
     @Indexed
     private String taluk;
     @Indexed
     private String gramPanchayat;
+    private String pincode;
+    private String postalAddress;
+    private String nativePlace;
+    private String hostelName;
 
-    /** FW / finance documents and other attachments. */
+    // ----- MSYEP allotments (auto-generated) -----
+    /** MSYEP Register No: MSYEP{year}{NNNNNN}. */
+    @Indexed(unique = true, sparse = true)
+    private String registerNo;
+    /** Batch code: BATCH-{year}-{NNN}. */
+    private String batchCode;
+    private String courseJoiningDate;
+    /** Chosen college / hostel. */
+    private String collegeName;
+
+    /** Uploaded student documents (photo, Aadhaar, PAN, marks cards, fee receipt, caste cert). */
     @Builder.Default
     private List<StudentDocument> documents = new ArrayList<>();
 

@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
-import { Center, CenterRegistrationResult, EntranceResult, EntranceStart, FinanceRow, GramPanchayat, Staff, Student, Zone, ZoneRegistrationResult } from './models';
+import { Center, CenterRegistrationResult, EntranceResult, EntranceStart, FinanceRow, GramPanchayat, Staff, Student, StudentRegistrationResult, Zone, ZoneRegistrationResult } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class DataService {
@@ -41,9 +41,16 @@ export class DataService {
   // Students
   students = (centerId?: string): Observable<Student[]> =>
     this.api.get<Student[]>('/students', { centerId });
-  createStudent = (s: Student) => this.api.post<Student>('/students', s);
+  createStudent = (s: Student) => this.api.post<StudentRegistrationResult>('/students', s);
   updateStudent = (id: string, s: Student) => this.api.put<Student>(`/students/${id}`, s);
   deleteStudent = (id: string) => this.api.delete<void>(`/students/${id}`);
+  uploadStudentDocument = (id: string, type: string, label: string, file: File) => {
+    const form = new FormData();
+    form.append('type', type);
+    form.append('label', label);
+    form.append('file', file);
+    return this.api.post<Student>(`/students/${id}/documents`, form);
+  };
 
   // Finance
   financeStudents = (f: {

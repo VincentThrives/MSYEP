@@ -296,25 +296,100 @@ export const CENTER_DOC_SLOTS: CenterDocSlot[] = [
 ];
 
 export interface StudentDocument {
+  type: string;
   label: string;
-  url: string;
-  type?: string;
+  filename: string;
+  size: number;
+  path: string;
 }
 
 export interface Student {
   id?: string;
+  // Account
   name: string;
-  phone?: string;
   email?: string;
+  phone?: string;
+  userId?: string;
+  password?: string;
   course?: string;
+  // Personal
+  gender?: string;
+  dateOfBirth?: string;
+  caste?: string;
+  // Education & job
+  educationalQualification?: string;
+  admissionYear?: string;
+  interestedInternship?: string;
+  technicalSkills?: string;
+  hobbies?: string[];
+  interestedCourses?: string[];
+  careerGoal?: string;
   centerId?: string;
   zoneId?: string;
+  // Address
+  state?: string;
   district?: string;
   taluk?: string;
   gramPanchayat?: string;
+  pincode?: string;
+  postalAddress?: string;
+  nativePlace?: string;
+  hostelName?: string;
+  // Allotments
+  registerNo?: string;
+  batchCode?: string;
+  courseJoiningDate?: string;
+  collegeName?: string;
   documents?: StudentDocument[];
   active?: boolean;
 }
+
+export interface StudentRegistrationResult {
+  student: Student;
+  registerNo: string;
+  batchCode: string;
+  loginId: string;
+  note: string;
+}
+
+export const CASTES = ['General', 'SC', 'ST', 'Category-1', 'Category-2A', 'Category-2B', 'Category-3A', 'Category-3B', 'Others'];
+export const HOBBIES = ['Music', 'Classical Dancing', 'Acting', 'No'];
+export const YES_NO = ['Yes', 'No'];
+
+export const STUDENT_DOC_SLOTS: { type: string; label: string }[] = [
+  { type: 'passportPhoto', label: "Student's Passport Size Photo" },
+  { type: 'aadhaar', label: "Student's Aadhar Copy" },
+  { type: 'pancard', label: "Student's Pancard Copy" },
+  { type: 'sslcMarks', label: "Student's SSLC Marks Card Copy" },
+  { type: 'pucDiplomaMarks', label: "Student's PUC / Diploma Marks Card Copy" },
+  { type: 'feeReceipt', label: 'If Studying, Present Year College Fee Paid Receipt' },
+  { type: 'casteCertificate', label: "Student's Caste Certificate" },
+];
+
+/** Interested-courses catalog (grouped), from the KP-MSYEP student form. */
+export const COURSE_CATALOG: { group: string; items: string[] }[] = [
+  { group: 'Basic Level Technical Computer Courses', items: [
+    'Computer Fundamentals (Basics of Hardware & Software)', 'MS Office (Word, Excel, PowerPoint, Access)',
+    'Internet & Email Handling', 'Typing & Data Entry', 'Digital Literacy (NIELIT CCC / BCC)'] },
+  { group: 'Programming & Development', items: [
+    'C, C++ Programming', 'Java / Advanced Java', 'Python Programming',
+    '.NET Framework (C#, ASP.NET, VB.NET)', 'PHP & MySQL', 'Full Stack Development (MERN / MEAN)',
+    'Mobile App Development (Android / iOS)', 'Web Designing (HTML, CSS, JavaScript, Bootstrap)'] },
+  { group: 'Software & Database', items: [
+    'Database Management (SQL, Oracle, MongoDB)', 'Software Engineering & Testing (Manual & Automation)',
+    'ERP (SAP, Tally Prime with GST, Odoo Basics)', 'Cloud Computing (AWS, Azure, Google Cloud)'] },
+  { group: 'Networking & Hardware', items: [
+    'Computer Hardware & Maintenance', 'Networking (CCNA, CCNP)', 'Ethical Hacking & Cybersecurity',
+    'System Administration (Linux / Windows Server)', 'Cloud Networking'] },
+  { group: 'Multimedia & Design', items: [
+    'Graphic Design (Photoshop, Illustrator, CorelDRAW)', 'Video Editing (Premiere Pro, Final Cut, DaVinci Resolve)',
+    '2D / 3D Animation (Maya, Blender, After Effects)', 'UI/UX Designing', 'AutoCAD (Mechanical / Civil / Electrical)'] },
+  { group: 'Specialized / Job-Oriented Courses', items: [
+    'Artificial Intelligence (AI) & Machine Learning', 'Data Science & Big Data Analytics', 'Blockchain Technology',
+    'Internet of Things (IoT)', 'Cyber Forensics', 'Cloud Security', 'Robotics & Embedded Systems'] },
+  { group: 'Short-Term Certificate / Diploma Courses', items: [
+    'Diploma in Computer Applications (DCA)'] },
+];
 
 export interface FinanceRow {
   serialNo: number;

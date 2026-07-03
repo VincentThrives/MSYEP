@@ -1,8 +1,14 @@
 package com.vincent.msyep.modules.student;
 
 import com.vincent.msyep.common.exception.ResourceNotFoundException;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.List;
 
@@ -10,9 +16,11 @@ import java.util.List;
 public class StudentService {
 
     private final StudentRepository repo;
+    private final String uploadsDir;
 
-    public StudentService(StudentRepository repo) {
+    public StudentService(StudentRepository repo, @Value("${app.uploads-dir:uploads}") String uploadsDir) {
         this.repo = repo;
+        this.uploadsDir = uploadsDir;
     }
 
     public List<Student> findAll() {
@@ -34,19 +42,36 @@ public class StudentService {
         return repo.save(student);
     }
 
-    public Student update(String id, Student changes) {
+    public Student update(String id, Student c) {
         Student e = findById(id);
-        e.setName(changes.getName());
-        e.setPhone(changes.getPhone());
-        e.setEmail(changes.getEmail());
-        e.setCourse(changes.getCourse());
-        e.setCenterId(changes.getCenterId());
-        e.setZoneId(changes.getZoneId());
-        e.setDistrict(changes.getDistrict());
-        e.setTaluk(changes.getTaluk());
-        e.setGramPanchayat(changes.getGramPanchayat());
-        if (changes.getDocuments() != null) e.setDocuments(changes.getDocuments());
-        e.setActive(changes.isActive());
+        e.setName(c.getName());
+        e.setEmail(c.getEmail());
+        e.setPhone(c.getPhone());
+        e.setCourse(c.getCourse());
+        // registerNo / batchCode / login immutable once generated.
+        e.setGender(c.getGender());
+        e.setDateOfBirth(c.getDateOfBirth());
+        e.setCaste(c.getCaste());
+        e.setEducationalQualification(c.getEducationalQualification());
+        e.setAdmissionYear(c.getAdmissionYear());
+        e.setInterestedInternship(c.getInterestedInternship());
+        e.setTechnicalSkills(c.getTechnicalSkills());
+        e.setHobbies(c.getHobbies());
+        e.setInterestedCourses(c.getInterestedCourses());
+        e.setCareerGoal(c.getCareerGoal());
+        e.setCenterId(c.getCenterId());
+        e.setZoneId(c.getZoneId());
+        e.setState(c.getState());
+        e.setDistrict(c.getDistrict());
+        e.setTaluk(c.getTaluk());
+        e.setGramPanchayat(c.getGramPanchayat());
+        e.setPincode(c.getPincode());
+        e.setPostalAddress(c.getPostalAddress());
+        e.setNativePlace(c.getNativePlace());
+        e.setHostelName(c.getHostelName());
+        e.setCourseJoiningDate(c.getCourseJoiningDate());
+        e.setCollegeName(c.getCollegeName());
+        e.setActive(c.isActive());
         e.setUpdatedAt(Instant.now());
         return repo.save(e);
     }
@@ -56,5 +81,25 @@ public class StudentService {
             throw new ResourceNotFoundException("Student not found: " + id);
         }
         repo.deleteById(id);
+    }
+
+    /** Save an uploaded student document to disk and attach it. */
+    public Student attachDocument(String id, String type, String label, MultipartFile file) {
+        Student s = findById(id);
+        if (file == null || file.isEmpty()) throw new IllegalArgumentException("No file provided");
+        if (file.getSize() > 500 * 1024) throw new IllegalArgumentException("File exceeds 500 KB limit");
+        try {
+            Path dir = Paths.get(uploadsDir, "students", id);
+            Files.createDirectories(dir);
+            String original = file.getOriginalFilename() == null ? "file" : file.getOriginalFilename();
+            String safe = type + "_" + original.replaceAll("[^a-zA-Z0-9._-]", "_");
+            file.transferTo(dir.resolve(safe).toAbsolutePath());
+            s.getDocuments().removeIf(d -> type.equals(d.getType()));
+            s.getDocuments().add(new StudentDocument(type, label, original, file.getSize(),
+                    Paths.get("students", id, safe).toString()));
+            return repo.save(s);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to store file: " + ex.getMessage());
+        }
     }
 }

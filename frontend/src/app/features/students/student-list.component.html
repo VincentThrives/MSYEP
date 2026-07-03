@@ -1,67 +1,199 @@
-    <div class="head">
-      <h1>Students</h1>
-      <button mat-flat-button color="primary" (click)="newStudent()">
-        <mat-icon>add</mat-icon> Add Student
-      </button>
-    </div>
+<div class="head">
+  <h1>Students</h1>
+  <button mat-flat-button color="primary" (click)="newStudent()">
+    <mat-icon>person_add</mat-icon> Create Student
+  </button>
+</div>
 
-    <div class="form-panel" *ngIf="editing()">
-      <h3>{{ form.id ? 'Edit' : 'Add' }} Student</h3>
-      <div class="row">
-        <mat-form-field appearance="outline"><mat-label>Name</mat-label>
-          <input matInput [(ngModel)]="form.name" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Phone</mat-label>
-          <input matInput [(ngModel)]="form.phone" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Email</mat-label>
-          <input matInput [(ngModel)]="form.email" /></mat-form-field>
-        <app-search-select label="Course" [options]="courses"
-          [(value)]="form.course"></app-search-select>
-      </div>
-      <div class="row">
-        <app-search-select label="Center" [options]="centers()" valueKey="id"
-          labelKey="name" [(value)]="form.centerId"></app-search-select>
-      </div>
-      <div class="row">
-        <app-location-picker
-          [(district)]="form.district" [(taluk)]="form.taluk"
-          [(gramPanchayat)]="form.gramPanchayat"></app-location-picker>
-      </div>
-      <div class="form-actions">
-        <button mat-button (click)="editing.set(false)">Cancel</button>
-        <button mat-flat-button color="primary" (click)="save()">Save</button>
-      </div>
-    </div>
+<!-- Registration success -->
+<div class="reg-panel" *ngIf="result() as r">
+  <div class="reg-head">
+    <mat-icon>check_circle</mat-icon><span>Student registered</span>
+    <button mat-icon-button (click)="result.set(null)"><mat-icon>close</mat-icon></button>
+  </div>
+  <div class="reg-grid">
+    <div><span class="k">MSYEP Register No</span><span class="v mono">{{ r.registerNo }}</span></div>
+    <div><span class="k">Batch Code</span><span class="v mono">{{ r.batchCode }}</span></div>
+    <div><span class="k">Login (User ID)</span><span class="v">{{ r.loginId || '—' }}</span></div>
+  </div>
+  <div class="reg-note"><mat-icon>info</mat-icon> {{ r.note }}</div>
+</div>
 
-    <table mat-table [dataSource]="students()" class="mat-elevation-z1 full">
-      <ng-container matColumnDef="name">
-        <th mat-header-cell *matHeaderCellDef>Name</th>
-        <td mat-cell *matCellDef="let s">{{ s.name }}</td>
-      </ng-container>
-      <ng-container matColumnDef="course">
-        <th mat-header-cell *matHeaderCellDef>Course</th>
-        <td mat-cell *matCellDef="let s">{{ s.course }}</td>
-      </ng-container>
-      <ng-container matColumnDef="district">
-        <th mat-header-cell *matHeaderCellDef>District</th>
-        <td mat-cell *matCellDef="let s">{{ s.district }}</td>
-      </ng-container>
-      <ng-container matColumnDef="gp">
-        <th mat-header-cell *matHeaderCellDef>Gram Panchayat</th>
-        <td mat-cell *matCellDef="let s">{{ s.gramPanchayat }}</td>
-      </ng-container>
-      <ng-container matColumnDef="phone">
-        <th mat-header-cell *matHeaderCellDef>Phone</th>
-        <td mat-cell *matCellDef="let s">{{ s.phone }}</td>
-      </ng-container>
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef>Actions</th>
-        <td mat-cell *matCellDef="let s">
-          <button mat-icon-button (click)="edit(s)"><mat-icon>edit</mat-icon></button>
-          <button mat-icon-button color="warn" (click)="remove(s)"><mat-icon>delete</mat-icon></button>
-        </td>
-      </ng-container>
-      <tr mat-header-row *matHeaderRowDef="cols"></tr>
-      <tr mat-row *matRowDef="let row; columns: cols"></tr>
-    </table>
-    <p *ngIf="!students().length" class="empty">No students yet.</p>
-  
+<div class="form-panel" *ngIf="editing()">
+  <mat-tab-group>
+    <!-- 1: Account -->
+    <mat-tab label="Account">
+      <div class="tab">
+        <div class="row">
+          <mat-form-field appearance="outline"><mat-label>Student Name</mat-label>
+            <mat-icon matPrefix>person</mat-icon>
+            <input matInput [(ngModel)]="form.name" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Student Email</mat-label>
+            <input matInput type="email" [(ngModel)]="form.email" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Mobile No</mat-label>
+            <input matInput [(ngModel)]="form.phone" /></mat-form-field>
+        </div>
+        <div class="row">
+          <mat-form-field appearance="outline"><mat-label>User ID</mat-label>
+            <mat-icon matPrefix>badge</mat-icon>
+            <input matInput [(ngModel)]="form.userId" autocomplete="off" [disabled]="!!form.id" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Password</mat-label>
+            <mat-icon matPrefix>lock</mat-icon>
+            <input matInput type="password" [(ngModel)]="form.password" autocomplete="new-password" [disabled]="!!form.id" /></mat-form-field>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- 2: Personal -->
+    <mat-tab label="Personal Details">
+      <div class="tab">
+        <div class="row">
+          <app-search-select label="Gender" [options]="genders" [(value)]="form.gender"></app-search-select>
+          <mat-form-field appearance="outline"><mat-label>Date of Birth</mat-label>
+            <input matInput type="date" [(ngModel)]="form.dateOfBirth" /></mat-form-field>
+          <app-search-select label="Caste" [options]="castes" [(value)]="form.caste"></app-search-select>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- 3: Education & Job -->
+    <mat-tab label="Education & Job">
+      <div class="tab">
+        <div class="row">
+          <mat-form-field appearance="outline"><mat-label>Educational Qualification (Current Class)</mat-label>
+            <input matInput [(ngModel)]="form.educationalQualification" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Latest Admission Year</mat-label>
+            <input matInput type="date" [(ngModel)]="form.admissionYear" /></mat-form-field>
+          <app-search-select label="Interested for Internship?" [options]="yesNo"
+            [(value)]="form.interestedInternship"></app-search-select>
+        </div>
+        <div class="row">
+          <mat-form-field appearance="outline" class="wide"><mat-label>Technical Skills (comma separated)</mat-label>
+            <input matInput [(ngModel)]="form.technicalSkills" /></mat-form-field>
+        </div>
+        <h4 class="sub">Hobbies</h4>
+        <div class="chks">
+          <mat-checkbox *ngFor="let h of hobbies" [checked]="isChecked('hobbies', h)"
+            (change)="toggle('hobbies', h, $event.checked)">{{ h }}</mat-checkbox>
+        </div>
+        <h4 class="sub">Interested Courses</h4>
+        <div class="cat" *ngFor="let g of catalog">
+          <div class="cat-title">◆ {{ g.group }}</div>
+          <div class="chks">
+            <mat-checkbox *ngFor="let c of g.items" [checked]="isChecked('interestedCourses', c)"
+              (change)="toggle('interestedCourses', c, $event.checked)">{{ c }}</mat-checkbox>
+          </div>
+        </div>
+        <div class="row">
+          <mat-form-field appearance="outline" class="wide"><mat-label>Career Goal</mat-label>
+            <textarea matInput rows="2" [(ngModel)]="form.careerGoal"></textarea></mat-form-field>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- 4: Address -->
+    <mat-tab label="Address">
+      <div class="tab">
+        <div class="row">
+          <app-search-select label="Center (College)" [options]="centers()" valueKey="id"
+            labelKey="name" [emptyOption]="true" [(value)]="form.centerId"></app-search-select>
+          <mat-form-field appearance="outline"><mat-label>State</mat-label>
+            <input matInput [(ngModel)]="form.state" /></mat-form-field>
+        </div>
+        <div class="row">
+          <app-location-picker [(district)]="form.district" [(taluk)]="form.taluk"
+            [(gramPanchayat)]="form.gramPanchayat"></app-location-picker>
+        </div>
+        <div class="row">
+          <mat-form-field appearance="outline"><mat-label>Pincode</mat-label>
+            <input matInput [(ngModel)]="form.pincode" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Native Place (if migrant)</mat-label>
+            <input matInput [(ngModel)]="form.nativePlace" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Hostel Name</mat-label>
+            <input matInput [(ngModel)]="form.hostelName" /></mat-form-field>
+        </div>
+        <div class="row">
+          <mat-form-field appearance="outline" class="wide"><mat-label>Postal Address</mat-label>
+            <textarea matInput rows="2" [(ngModel)]="form.postalAddress"></textarea></mat-form-field>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- 5: Allotments -->
+    <mat-tab label="MSYEP Allotments">
+      <div class="tab">
+        <div class="allot">
+          <div class="auto-field"><span class="k">MSYEP Register No</span>
+            <span class="v mono">{{ form.registerNo || 'Auto: MSYEP' + year + 'NNNNNN' }}</span></div>
+          <div class="auto-field"><span class="k">Batch Code</span>
+            <span class="v mono">{{ form.batchCode || 'Auto: BATCH-' + year + '-NNN' }}</span></div>
+        </div>
+        <div class="row">
+          <mat-form-field appearance="outline"><mat-label>Course Joining Date</mat-label>
+            <input matInput type="date" [(ngModel)]="form.courseJoiningDate" /></mat-form-field>
+          <app-search-select label="Choose College / Hostel Name" [options]="centers()" valueKey="name"
+            labelKey="name" [(value)]="form.collegeName"></app-search-select>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- 6: Documents -->
+    <mat-tab label="Documents">
+      <div class="tab">
+        <p class="hint">Upload separate files · max 500 KB per file.</p>
+        <div class="docs">
+          <div class="doc" *ngFor="let slot of docSlots">
+            <div class="doc-label">{{ slot.label }}</div>
+            <div class="doc-pick">
+              <button mat-stroked-button type="button" (click)="picker.click()">
+                <mat-icon>image</mat-icon> Choose file</button>
+              <input #picker type="file" hidden accept="image/*,.pdf" (change)="onFile(slot.type, $event)" />
+              <span class="doc-name" [class.has]="selectedName(slot.type)">
+                {{ selectedName(slot.type) || existingDocName(slot.type) || 'No file chosen' }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+
+  <div class="form-actions">
+    <button mat-button (click)="editing.set(false)">Cancel</button>
+    <button mat-flat-button color="primary" (click)="save()" [disabled]="saving()">
+      {{ form.id ? 'Save' : 'Submit' }}
+    </button>
+  </div>
+</div>
+
+<table mat-table [dataSource]="students()" class="mat-elevation-z1 full">
+  <ng-container matColumnDef="name">
+    <th mat-header-cell *matHeaderCellDef>Name</th>
+    <td mat-cell *matCellDef="let s">{{ s.name }}</td>
+  </ng-container>
+  <ng-container matColumnDef="register">
+    <th mat-header-cell *matHeaderCellDef>Register No</th>
+    <td mat-cell *matCellDef="let s"><span class="mono small">{{ s.registerNo }}</span></td>
+  </ng-container>
+  <ng-container matColumnDef="batch">
+    <th mat-header-cell *matHeaderCellDef>Batch Code</th>
+    <td mat-cell *matCellDef="let s"><span class="mono small">{{ s.batchCode }}</span></td>
+  </ng-container>
+  <ng-container matColumnDef="gender">
+    <th mat-header-cell *matHeaderCellDef>Gender</th>
+    <td mat-cell *matCellDef="let s">{{ s.gender }}</td>
+  </ng-container>
+  <ng-container matColumnDef="district">
+    <th mat-header-cell *matHeaderCellDef>District</th>
+    <td mat-cell *matCellDef="let s">{{ s.district }}</td>
+  </ng-container>
+  <ng-container matColumnDef="actions">
+    <th mat-header-cell *matHeaderCellDef>Actions</th>
+    <td mat-cell *matCellDef="let s">
+      <button mat-icon-button (click)="edit(s)"><mat-icon>edit</mat-icon></button>
+      <button mat-icon-button color="warn" (click)="remove(s)"><mat-icon>delete</mat-icon></button>
+    </td>
+  </ng-container>
+  <tr mat-header-row *matHeaderRowDef="cols"></tr>
+  <tr mat-row *matRowDef="let row; columns: cols"></tr>
+</table>
+<p *ngIf="!students().length" class="empty">No students yet.</p>

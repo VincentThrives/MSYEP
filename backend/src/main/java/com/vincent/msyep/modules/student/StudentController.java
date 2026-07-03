@@ -1,8 +1,10 @@
 package com.vincent.msyep.modules.student;
 
 import com.vincent.msyep.common.ApiResponse;
+import com.vincent.msyep.modules.student.dto.StudentRegistrationResult;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -11,9 +13,11 @@ import java.util.List;
 public class StudentController {
 
     private final StudentService service;
+    private final StudentRegistrationService registration;
 
-    public StudentController(StudentService service) {
+    public StudentController(StudentService service, StudentRegistrationService registration) {
         this.service = service;
+        this.registration = registration;
     }
 
     @GetMapping
@@ -28,8 +32,19 @@ public class StudentController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','ZONE','CENTER')")
-    public ApiResponse<Student> create(@RequestBody Student student) {
-        return ApiResponse.ok("Student created", service.create(student));
+    public ApiResponse<StudentRegistrationResult> create(@RequestBody Student student) {
+        StudentRegistrationResult result = registration.register(student);
+        return ApiResponse.ok(result.note(), result);
+    }
+
+    @PostMapping("/{id}/documents")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','ZONE','CENTER','STUDENT')")
+    public ApiResponse<Student> uploadDocument(
+            @PathVariable String id,
+            @RequestParam("type") String type,
+            @RequestParam(value = "label", required = false) String label,
+            @RequestParam("file") MultipartFile file) {
+        return ApiResponse.ok("Document uploaded", service.attachDocument(id, type, label, file));
     }
 
     @PutMapping("/{id}")
