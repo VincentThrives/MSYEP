@@ -1,7 +1,7 @@
 <div class="head">
-  <h1>Students</h1>
-  <button mat-flat-button color="primary" (click)="newStudent()">
-    <mat-icon>person_add</mat-icon> Create Student
+  <h1>Create Student</h1>
+  <button mat-stroked-button (click)="newStudent()">
+    <mat-icon>refresh</mat-icon> New / Reset
   </button>
 </div>
 
@@ -17,13 +17,36 @@
     <div><span class="k">Login (User ID)</span><span class="v">{{ r.loginId || '—' }}</span></div>
   </div>
   <div class="reg-note"><mat-icon>info</mat-icon> {{ r.note }}</div>
+  <div class="reg-actions">
+    <button mat-flat-button color="primary" (click)="newStudent()">
+      <mat-icon>person_add</mat-icon> Register another student
+    </button>
+  </div>
 </div>
 
-<div class="form-panel" *ngIf="editing()">
-  <mat-tab-group>
+<div class="form-panel" *ngIf="editing()" (input)="onFormActivity()" (change)="onFormActivity()">
+  <!-- Overall completion -->
+  <div class="overall" [class.done]="overall() === 100">
+    <div class="overall-top">
+      <span>Overall completion</span><b>{{ overall() }}%</b>
+    </div>
+    <div class="bar"><div class="fill" [style.width.%]="overall()"></div></div>
+  </div>
+
+  <mat-tab-group [selectedIndex]="tabIndex()" (selectedIndexChange)="tabIndex.set($event)">
     <!-- 1: Account -->
-    <mat-tab label="Account">
-      <div class="tab">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <span class="tl" [class.done]="isComplete('account')">Account
+          <mat-icon *ngIf="isComplete('account')">check_circle</mat-icon>
+          <span *ngIf="!isComplete('account')" class="pct">{{ progress('account') }}%</span>
+        </span>
+      </ng-template>
+      <div class="tab" [class.complete]="isComplete('account')">
+        <div class="sec-progress" [class.done]="isComplete('account')">
+          <div class="bar"><div class="fill" [style.width.%]="progress('account')"></div></div>
+          <span class="lbl">{{ progress('account') }}% complete</span>
+        </div>
         <div class="row">
           <mat-form-field appearance="outline"><mat-label>Student Name</mat-label>
             <mat-icon matPrefix>person</mat-icon>
@@ -41,31 +64,59 @@
             <mat-icon matPrefix>lock</mat-icon>
             <input matInput type="password" [(ngModel)]="form.password" autocomplete="new-password" [disabled]="!!form.id" /></mat-form-field>
         </div>
+        <div class="tab-nav">
+          <span></span>
+          <button mat-flat-button color="primary" (click)="goTo(1)">Next: Personal Details <mat-icon>arrow_forward</mat-icon></button>
+        </div>
       </div>
     </mat-tab>
 
     <!-- 2: Personal -->
-    <mat-tab label="Personal Details">
-      <div class="tab">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <span class="tl" [class.done]="isComplete('personal')">Personal Details
+          <mat-icon *ngIf="isComplete('personal')">check_circle</mat-icon>
+          <span *ngIf="!isComplete('personal')" class="pct">{{ progress('personal') }}%</span>
+        </span>
+      </ng-template>
+      <div class="tab" [class.complete]="isComplete('personal')">
+        <div class="sec-progress" [class.done]="isComplete('personal')">
+          <div class="bar"><div class="fill" [style.width.%]="progress('personal')"></div></div>
+          <span class="lbl">{{ progress('personal') }}% complete</span>
+        </div>
         <div class="row">
-          <app-search-select label="Gender" [options]="genders" [(value)]="form.gender"></app-search-select>
+          <app-search-select label="Gender" [options]="genders" [(value)]="form.gender" (valueChange)="onFormActivity()"></app-search-select>
           <mat-form-field appearance="outline"><mat-label>Date of Birth</mat-label>
             <input matInput type="date" [(ngModel)]="form.dateOfBirth" /></mat-form-field>
-          <app-search-select label="Caste" [options]="castes" [(value)]="form.caste"></app-search-select>
+          <app-search-select label="Caste" [options]="castes" [(value)]="form.caste" (valueChange)="onFormActivity()"></app-search-select>
+        </div>
+        <div class="tab-nav">
+          <button mat-stroked-button (click)="goTo(0)"><mat-icon>arrow_back</mat-icon> Back</button>
+          <button mat-flat-button color="primary" (click)="goTo(2)">Next: Education &amp; Job <mat-icon>arrow_forward</mat-icon></button>
         </div>
       </div>
     </mat-tab>
 
     <!-- 3: Education & Job -->
-    <mat-tab label="Education & Job">
-      <div class="tab">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <span class="tl" [class.done]="isComplete('education')">Education &amp; Job
+          <mat-icon *ngIf="isComplete('education')">check_circle</mat-icon>
+          <span *ngIf="!isComplete('education')" class="pct">{{ progress('education') }}%</span>
+        </span>
+      </ng-template>
+      <div class="tab" [class.complete]="isComplete('education')">
+        <div class="sec-progress" [class.done]="isComplete('education')">
+          <div class="bar"><div class="fill" [style.width.%]="progress('education')"></div></div>
+          <span class="lbl">{{ progress('education') }}% complete</span>
+        </div>
         <div class="row">
           <mat-form-field appearance="outline"><mat-label>Educational Qualification (Current Class)</mat-label>
             <input matInput [(ngModel)]="form.educationalQualification" /></mat-form-field>
           <mat-form-field appearance="outline"><mat-label>Latest Admission Year</mat-label>
             <input matInput type="date" [(ngModel)]="form.admissionYear" /></mat-form-field>
           <app-search-select label="Interested for Internship?" [options]="yesNo"
-            [(value)]="form.interestedInternship"></app-search-select>
+            [(value)]="form.interestedInternship" (valueChange)="onFormActivity()"></app-search-select>
         </div>
         <div class="row">
           <mat-form-field appearance="outline" class="wide"><mat-label>Technical Skills (comma separated)</mat-label>
@@ -88,15 +139,33 @@
           <mat-form-field appearance="outline" class="wide"><mat-label>Career Goal</mat-label>
             <textarea matInput rows="2" [(ngModel)]="form.careerGoal"></textarea></mat-form-field>
         </div>
+        <div class="tab-nav">
+          <button mat-stroked-button (click)="goTo(1)"><mat-icon>arrow_back</mat-icon> Back</button>
+          <button mat-flat-button color="primary" (click)="goTo(3)">Next: Address <mat-icon>arrow_forward</mat-icon></button>
+        </div>
       </div>
     </mat-tab>
 
     <!-- 4: Address -->
-    <mat-tab label="Address">
-      <div class="tab">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <span class="tl" [class.done]="isComplete('address')">Address
+          <mat-icon *ngIf="isComplete('address')">check_circle</mat-icon>
+          <span *ngIf="!isComplete('address')" class="pct">{{ progress('address') }}%</span>
+        </span>
+      </ng-template>
+      <div class="tab" [class.complete]="isComplete('address')">
+        <div class="sec-progress" [class.done]="isComplete('address')">
+          <div class="bar"><div class="fill" [style.width.%]="progress('address')"></div></div>
+          <span class="lbl">{{ progress('address') }}% complete</span>
+        </div>
         <div class="row">
-          <app-search-select label="Center (College)" [options]="centers()" valueKey="id"
-            labelKey="name" [emptyOption]="true" [(value)]="form.centerId"></app-search-select>
+          <app-search-select label="Zone (University) *" [options]="zones()" valueKey="id"
+            labelKey="name" [emptyOption]="true" [disabled]="lockZone"
+            [value]="form.zoneId" (valueChange)="onZone($event)"></app-search-select>
+          <app-search-select label="Center (College) *" [options]="centersForZone()" valueKey="id"
+            labelKey="name" [emptyOption]="true" [disabled]="lockCenter || !form.zoneId"
+            [value]="form.centerId" (valueChange)="onCenter($event)"></app-search-select>
           <mat-form-field appearance="outline"><mat-label>State</mat-label>
             <input matInput [(ngModel)]="form.state" /></mat-form-field>
         </div>
@@ -116,12 +185,26 @@
           <mat-form-field appearance="outline" class="wide"><mat-label>Postal Address</mat-label>
             <textarea matInput rows="2" [(ngModel)]="form.postalAddress"></textarea></mat-form-field>
         </div>
+        <div class="tab-nav">
+          <button mat-stroked-button (click)="goTo(2)"><mat-icon>arrow_back</mat-icon> Back</button>
+          <button mat-flat-button color="primary" (click)="goTo(4)">Next: MSYEP Allotments <mat-icon>arrow_forward</mat-icon></button>
+        </div>
       </div>
     </mat-tab>
 
     <!-- 5: Allotments -->
-    <mat-tab label="MSYEP Allotments">
-      <div class="tab">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <span class="tl" [class.done]="isComplete('allotments')">MSYEP Allotments
+          <mat-icon *ngIf="isComplete('allotments')">check_circle</mat-icon>
+          <span *ngIf="!isComplete('allotments')" class="pct">{{ progress('allotments') }}%</span>
+        </span>
+      </ng-template>
+      <div class="tab" [class.complete]="isComplete('allotments')">
+        <div class="sec-progress" [class.done]="isComplete('allotments')">
+          <div class="bar"><div class="fill" [style.width.%]="progress('allotments')"></div></div>
+          <span class="lbl">{{ progress('allotments') }}% complete</span>
+        </div>
         <div class="allot">
           <div class="auto-field"><span class="k">MSYEP Register No</span>
             <span class="v mono">{{ form.registerNo || 'Auto: MSYEP' + year + 'NNNNNN' }}</span></div>
@@ -132,14 +215,28 @@
           <mat-form-field appearance="outline"><mat-label>Course Joining Date</mat-label>
             <input matInput type="date" [(ngModel)]="form.courseJoiningDate" /></mat-form-field>
           <app-search-select label="Choose College / Hostel Name" [options]="centers()" valueKey="name"
-            labelKey="name" [(value)]="form.collegeName"></app-search-select>
+            labelKey="name" [(value)]="form.collegeName" (valueChange)="onFormActivity()"></app-search-select>
+        </div>
+        <div class="tab-nav">
+          <button mat-stroked-button (click)="goTo(3)"><mat-icon>arrow_back</mat-icon> Back</button>
+          <button mat-flat-button color="primary" (click)="goTo(5)">Next: Documents <mat-icon>arrow_forward</mat-icon></button>
         </div>
       </div>
     </mat-tab>
 
     <!-- 6: Documents -->
-    <mat-tab label="Documents">
-      <div class="tab">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <span class="tl" [class.done]="isComplete('documents')">Documents
+          <mat-icon *ngIf="isComplete('documents')">check_circle</mat-icon>
+          <span *ngIf="!isComplete('documents')" class="pct">{{ progress('documents') }}%</span>
+        </span>
+      </ng-template>
+      <div class="tab" [class.complete]="isComplete('documents')">
+        <div class="sec-progress" [class.done]="isComplete('documents')">
+          <div class="bar"><div class="fill" [style.width.%]="progress('documents')"></div></div>
+          <span class="lbl">{{ progress('documents') }}% complete</span>
+        </div>
         <p class="hint">Upload separate files · max 500 KB per file.</p>
         <div class="docs">
           <div class="doc" *ngFor="let slot of docSlots">
@@ -153,47 +250,18 @@
             </div>
           </div>
         </div>
+        <div class="tab-nav">
+          <button mat-stroked-button (click)="goTo(4)"><mat-icon>arrow_back</mat-icon> Back</button>
+          <span></span>
+        </div>
       </div>
     </mat-tab>
   </mat-tab-group>
 
   <div class="form-actions">
-    <button mat-button (click)="editing.set(false)">Cancel</button>
+    <button mat-button (click)="newStudent()">Reset</button>
     <button mat-flat-button color="primary" (click)="save()" [disabled]="saving()">
       {{ form.id ? 'Save' : 'Submit' }}
     </button>
   </div>
 </div>
-
-<table mat-table [dataSource]="students()" class="mat-elevation-z1 full">
-  <ng-container matColumnDef="name">
-    <th mat-header-cell *matHeaderCellDef>Name</th>
-    <td mat-cell *matCellDef="let s">{{ s.name }}</td>
-  </ng-container>
-  <ng-container matColumnDef="register">
-    <th mat-header-cell *matHeaderCellDef>Register No</th>
-    <td mat-cell *matCellDef="let s"><span class="mono small">{{ s.registerNo }}</span></td>
-  </ng-container>
-  <ng-container matColumnDef="batch">
-    <th mat-header-cell *matHeaderCellDef>Batch Code</th>
-    <td mat-cell *matCellDef="let s"><span class="mono small">{{ s.batchCode }}</span></td>
-  </ng-container>
-  <ng-container matColumnDef="gender">
-    <th mat-header-cell *matHeaderCellDef>Gender</th>
-    <td mat-cell *matCellDef="let s">{{ s.gender }}</td>
-  </ng-container>
-  <ng-container matColumnDef="district">
-    <th mat-header-cell *matHeaderCellDef>District</th>
-    <td mat-cell *matCellDef="let s">{{ s.district }}</td>
-  </ng-container>
-  <ng-container matColumnDef="actions">
-    <th mat-header-cell *matHeaderCellDef>Actions</th>
-    <td mat-cell *matCellDef="let s">
-      <button mat-icon-button (click)="edit(s)"><mat-icon>edit</mat-icon></button>
-      <button mat-icon-button color="warn" (click)="remove(s)"><mat-icon>delete</mat-icon></button>
-    </td>
-  </ng-container>
-  <tr mat-header-row *matHeaderRowDef="cols"></tr>
-  <tr mat-row *matRowDef="let row; columns: cols"></tr>
-</table>
-<p *ngIf="!students().length" class="empty">No students yet.</p>

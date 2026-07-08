@@ -39,6 +39,12 @@ public class EntranceTestController {
         return ApiResponse.ok(service.attemptsFor(studentId));
     }
 
+    /** The student's completed result (data is null if they haven't taken it yet). */
+    @GetMapping("/result")
+    public ApiResponse<ResultResponse> result(@RequestParam String studentId) {
+        return ApiResponse.ok(service.latestResult(studentId));
+    }
+
     @GetMapping("/{attemptId}/result-pdf")
     public ResponseEntity<ByteArrayResource> resultPdf(@PathVariable String attemptId) {
         byte[] pdf = service.resultPdf(attemptId);

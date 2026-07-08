@@ -22,7 +22,7 @@ public class ZoneRegistrationService {
     private static final Logger log = LoggerFactory.getLogger(ZoneRegistrationService.class);
 
     private static final Map<String, Integer> TIER_AMOUNT = Map.of(
-            "Silver", 50000, "Gold", 75000, "Platinum", 100000, "Diamond", 125000);
+            "Silver", 75000, "Gold", 100000, "Platinum", 125000, "Diamond", 150000);
 
     private final ZoneRepository zones;
     private final UserRepository users;

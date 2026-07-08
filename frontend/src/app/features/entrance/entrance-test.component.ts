@@ -36,10 +36,13 @@ export class EntranceTestComponent implements OnDestroy {
   studentId?: string;
   exam = signal<EntranceStart | null>(null);
   result = signal<EntranceResult | null>(null);
+  /** True when the shown result is a previously-completed attempt (test is one-time only). */
+  alreadyTaken = signal(false);
   answers: Record<string, string> = {};
 
   cameraOn = signal(false);
   selfiePreview = signal<string | null>(null);
+  selfieReady = signal(false);
   camError = signal<string | null>(null);
   busy = signal(false);
   remaining = signal(0);
@@ -49,12 +52,35 @@ export class EntranceTestComponent implements OnDestroy {
   private selfieFile?: File;
 
   lockedStudent = computed(() => this.auth.role() === 'STUDENT' && !!this.auth.user()?.studentId);
-  answeredCount = computed(() => Object.values(this.answers).filter(Boolean).length);
-  canStart = computed(() => !!this.studentId && !!this.selfieFile);
+
+  // Plain methods (not computed): they read non-signal fields (studentId, selfieFile, answers),
+  // so they must be re-evaluated on every change-detection pass, not memoized by a computed.
+  answeredCount(): number {
+    return Object.values(this.answers).filter(Boolean).length;
+  }
+  canStart(): boolean {
+    // selfieReady() is a signal, so the button re-evaluates as soon as the selfie blob is ready.
+    return !!this.studentId && this.selfieReady();
+  }
 
   constructor() {
     this.data.students().subscribe((s) => this.students.set(s));
-    if (this.lockedStudent()) this.studentId = this.auth.user()!.studentId;
+    if (this.lockedStudent()) {
+      this.studentId = this.auth.user()!.studentId;
+      this.checkExisting();
+    }
+  }
+
+  /** One attempt only: if this student already took the test, show their result and block a retake. */
+  private checkExisting(): void {
+    if (!this.studentId) return;
+    this.data.entranceResult(this.studentId).subscribe((r) => {
+      if (r) {
+        this.result.set(r);
+        this.alreadyTaken.set(true);
+        this.state.set('result');
+      }
+    });
   }
 
   async startCamera(): Promise<void> {
@@ -76,13 +102,17 @@ export class EntranceTestComponent implements OnDestroy {
     c.getContext('2d')!.drawImage(v, 0, 0, c.width, c.height);
     this.selfiePreview.set(c.toDataURL('image/jpeg', 0.8));
     c.toBlob((blob) => {
-      if (blob) this.selfieFile = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
+      if (blob) {
+        this.selfieFile = new File([blob], 'selfie.jpg', { type: 'image/jpeg' });
+        this.selfieReady.set(true); // signal write → re-enables the Start Test button
+      }
     }, 'image/jpeg', 0.8);
     this.stopCamera();
   }
 
   retakeSelfie(): void {
     this.selfiePreview.set(null);
+    this.selfieReady.set(false);
     this.selfieFile = undefined;
     this.startCamera();
   }
@@ -102,6 +132,8 @@ export class EntranceTestComponent implements OnDestroy {
       error: (e) => {
         this.busy.set(false);
         this.snack.open(e?.error?.message || 'Could not start test', 'OK', { duration: 3000 });
+        // If the server blocked a second attempt, surface the existing result.
+        this.checkExisting();
       },
     });
   }
@@ -127,7 +159,9 @@ export class EntranceTestComponent implements OnDestroy {
         this.busy.set(false);
         this.result.set(r);
         this.state.set('result');
+        this.alreadyTaken.set(true); // one attempt used — no retake
         if (auto) this.snack.open('Time up — test auto-submitted', 'OK', { duration: 3000 });
+        this.snack.open('Your result sheet will be sent to your WhatsApp number.', 'OK', { duration: 4000 });
       },
       error: (e) => {
         this.busy.set(false);
@@ -151,6 +185,7 @@ export class EntranceTestComponent implements OnDestroy {
     this.result.set(null);
     this.answers = {};
     this.selfiePreview.set(null);
+    this.selfieReady.set(false);
     this.selfieFile = undefined;
     if (!this.lockedStudent()) this.studentId = undefined;
   }

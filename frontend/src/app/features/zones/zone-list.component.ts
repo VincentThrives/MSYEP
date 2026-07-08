@@ -1,4 +1,6 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -34,6 +36,8 @@ import {
 export class ZoneListComponent {
   private data = inject(DataService);
   private snack = inject(MatSnackBar);
+  private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
 
   cols = ['code', 'org', 'owner', 'tier', 'status', 'actions'];
   genders = GENDERS;
@@ -51,8 +55,45 @@ export class ZoneListComponent {
   form: Zone = this.blank();
   private files: Record<string, File> = {};
 
+  // ---- Wizard ----
+  readonly sections = [
+    { key: 'login', label: 'Login & Organization' },
+    { key: 'owner', label: 'Owner Details' },
+    { key: 'kyc', label: 'KYC & Documents' },
+    { key: 'fit', label: 'Business Fit' },
+    { key: 'membership', label: 'Membership & Submit' },
+  ];
+  tabIndex = signal(0);
+
+  // ---- View filters ----
+  fDistrict = signal('');
+  fTaluk = signal('');
+  fGp = signal('');
+  fSearch = signal('');
+
+  filtered = computed(() => {
+    const d = this.fDistrict(), t = this.fTaluk(), g = this.fGp();
+    const q = this.fSearch().trim().toLowerCase();
+    return this.zones().filter((z) =>
+      (!d || z.district === d) &&
+      (!t || z.taluk === t) &&
+      (!g || z.gramPanchayat === g) &&
+      (!q || [z.organizationName, z.name, z.ownerName, z.code].some((v) => (v || '').toLowerCase().includes(q))));
+  });
+  districtOptions = computed(() => this.distinct(this.zones().map((z) => z.district)));
+  talukOptions = computed(() =>
+    this.distinct(this.zones().filter((z) => !this.fDistrict() || z.district === this.fDistrict()).map((z) => z.taluk)));
+  gpOptions = computed(() =>
+    this.distinct(this.zones().filter((z) =>
+      (!this.fDistrict() || z.district === this.fDistrict()) &&
+      (!this.fTaluk() || z.taluk === this.fTaluk())).map((z) => z.gramPanchayat)));
+
   constructor() {
     this.load();
+    // Side-nav "Create Zone" opens the form via ?new=1; "View Zones" shows the list.
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((p) => (p.get('new') !== null ? this.newZone() : this.editing.set(false)));
   }
 
   load(): void {
@@ -67,13 +108,60 @@ export class ZoneListComponent {
     this.form = this.blank();
     this.files = {};
     this.result.set(null);
+    this.tabIndex.set(0);
     this.editing.set(true);
   }
 
   edit(z: Zone): void {
     this.form = { ...z };
     this.files = {};
+    this.tabIndex.set(0);
     this.editing.set(true);
+  }
+
+  // ---- Wizard helpers ----
+  private has(v: unknown): boolean {
+    return v !== undefined && v !== null && String(v).trim() !== '';
+  }
+  private sectionFields(key: string): boolean[] {
+    const f = this.form;
+    switch (key) {
+      case 'login':
+        return f.id
+          ? [this.has(f.organizationName) || this.has(f.name), this.has(f.buildingOwnership)]
+          : [this.has(f.userId), this.has(f.password), this.has(f.organizationName) || this.has(f.name), this.has(f.buildingOwnership)];
+      case 'owner':
+        return [this.has(f.ownerName), this.has(f.contactNumber), this.has(f.email),
+          this.has(f.fullAddress), this.has(f.district), this.has(f.taluk), this.has(f.gramPanchayat)];
+      case 'kyc':
+        return [this.has(f.aadhaarNumber), this.has(f.panNumber), this.has(f.bankAccountDetails)];
+      case 'fit':
+        return [this.has(f.investmentCapacity), this.has(f.preferredLocation),
+          this.has(f.spaceOwnership), this.has(f.spaceSqft), this.has(f.startTimeline)];
+      case 'membership':
+        return [this.has(f.membershipTier), f.tcAccepted === true];
+      default:
+        return [];
+    }
+  }
+  progress(key: string): number {
+    const a = this.sectionFields(key);
+    return a.length ? Math.round((a.filter(Boolean).length / a.length) * 100) : 0;
+  }
+  isComplete(key: string): boolean { return this.progress(key) === 100; }
+  overall(): number {
+    const a = this.sections.flatMap((s) => this.sectionFields(s.key));
+    return a.length ? Math.round((a.filter(Boolean).length / a.length) * 100) : 0;
+  }
+  goTo(i: number): void { if (i >= 0 && i < this.sections.length) this.tabIndex.set(i); }
+  get isLastTab(): boolean { return this.tabIndex() === this.sections.length - 1; }
+
+  // ---- Filter helpers ----
+  private distinct(vals: (string | undefined)[]): string[] {
+    return [...new Set(vals.filter((v): v is string => !!v && v.trim() !== ''))].sort();
+  }
+  clearFilters(): void {
+    this.fDistrict.set(''); this.fTaluk.set(''); this.fGp.set(''); this.fSearch.set('');
   }
 
   onFile(type: string, ev: Event): void {

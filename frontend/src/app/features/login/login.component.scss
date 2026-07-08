@@ -14,7 +14,31 @@
       background: linear-gradient(90deg, #0E5132, #C9A227);
       -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
     .tag { color: #6b7d72; margin-bottom: 20px; font-size: 13px; letter-spacing: .5px; }
+    .modes { width: 100%; margin: 4px 0 14px; border-radius: 12px; overflow: hidden; }
+    .modes .mat-button-toggle { flex: 1; }
+    /* 4 tabs → shrink the label so they fit one row */
+    .modes .mat-button-toggle-button { font-size: 12.5px; }
+    .modes .mat-button-toggle .mat-icon { font-size: 18px; height: 18px; width: 18px; margin-right: 2px; }
+    .modes .mat-button-toggle-label-content { padding: 0 8px; }
+    .modes .mat-button-toggle-checked { background: rgba(30,122,70,.12); }
+    .mode-hint { text-align: center; font-size: 12px; color: #6b7d72; margin: 0 0 12px; letter-spacing: .3px; }
     .bar { margin-bottom: 12px; border-radius: 4px; }
+    .info { color: #0E5132; font-size: 13px; margin: 0 0 10px; }
+    .devotp { color: #8a6d00; font-size: 13px; margin: 0 0 10px;
+      background: #fff7db; border: 1px solid #f0e2a8; border-radius: 8px; padding: 6px 10px; }
+    .devotp b { letter-spacing: 3px; font-size: 15px; }
+    .links { display: flex; justify-content: space-between; margin-top: 6px; }
+    .links.center { justify-content: center; }
+    .foot { margin-top: 16px; }
+    .success { margin-bottom: 14px; }
+    .success .ok { color: #1E7A46; font-size: 46px; height: 46px; width: 46px; }
+    .success .rows { margin-top: 10px; text-align: left; }
+    .success .rows > div { display: flex; justify-content: space-between; gap: 12px;
+      padding: 8px 12px; border: 1px solid #e6ece8; border-radius: 8px; margin-bottom: 8px; }
+    .success .rows span { color: #6b7d72; font-size: 13px; }
+    .success .rows b { color: #0E5132; letter-spacing: .5px; }
+    .reg-cta { margin-top: 4px; font-size: 13px; color: #6b7d72; }
+    .reg-cta a { color: #1E7A46; font-weight: 600; cursor: pointer; text-decoration: none; }
     .full { width: 100%; }
     .login-btn { background: linear-gradient(120deg, #1E7A46, #0E5132); color: #fff;
       height: 46px; font-weight: 700; letter-spacing: .5px; border-radius: 12px; }

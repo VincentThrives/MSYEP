@@ -1,7 +1,10 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { ApiService } from './api.service';
-import { AuthResponse, Role } from './models';
+import {
+  AuthResponse, IdName, OtpRequestResult, Role,
+  StudentSelfRegisterRequest, StudentSelfRegisterResult,
+} from './models';
 
 const STORAGE_KEY = 'msyep_auth';
 
@@ -16,6 +19,36 @@ export class AuthService {
 
   login(email: string, password: string): Observable<AuthResponse> {
     return this.api.post<AuthResponse>('/auth/login', { email, password }).pipe(
+      tap((res) => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(res));
+        this._user.set(res);
+      })
+    );
+  }
+
+  /** Public student self-registration → creates an OTP-only account. */
+  registerStudent(payload: StudentSelfRegisterRequest): Observable<StudentSelfRegisterResult> {
+    return this.api.post<StudentSelfRegisterResult>('/auth/register', payload);
+  }
+
+  /** Public zone list (id + name) for the registration form. */
+  publicZones(): Observable<IdName[]> {
+    return this.api.get<IdName[]>('/public/zones');
+  }
+
+  /** Public center list (id + name), optionally filtered by zone. */
+  publicCenters(zoneId?: string): Observable<IdName[]> {
+    return this.api.get<IdName[]>('/public/centers', { zoneId });
+  }
+
+  /** Step 1 of student login: request an OTP by User ID / email or mobile number. */
+  requestOtp(identifier: string): Observable<OtpRequestResult> {
+    return this.api.post<OtpRequestResult>('/auth/otp/request', { identifier });
+  }
+
+  /** Step 2 of student login: verify the OTP and establish the session. */
+  verifyOtp(identifier: string, otp: string): Observable<AuthResponse> {
+    return this.api.post<AuthResponse>('/auth/otp/verify', { identifier, otp }).pipe(
       tap((res) => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(res));
         this._user.set(res);

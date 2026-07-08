@@ -107,6 +107,7 @@ public class CenterRegistrationService {
             }
         }
 
+        String rawPassword = input.getPassword(); // captured for the credentials email
         input.setPassword(null); // never persist the plaintext password
         Center saved = centers.save(input);
 
@@ -122,9 +123,13 @@ public class CenterRegistrationService {
             note = "Mail not configured (set MAIL_USERNAME / MAIL_PASSWORD) — PDF available to download.";
         } else {
             try {
-                sendEmail(deliveryEmail, saved, pdf);
+                sendEmail(deliveryEmail, saved, pdf, loginId, rawPassword);
                 emailSent = true;
-                note = "Registration PDF emailed to " + deliveryEmail;
+                note = "Registration PDF + login credentials emailed to " + deliveryEmail
+                        + (StringUtils.hasText(saved.getPrincipalNumber())
+                            ? ". WhatsApp to principal " + saved.getPrincipalNumber()
+                                + " is pending a WhatsApp gateway."
+                            : "");
             } catch (Exception ex) {
                 note = "Email failed: " + ex.getMessage() + " — PDF available to download.";
                 log.warn("Failed to email center registration to {}", deliveryEmail, ex);
@@ -183,17 +188,25 @@ public class CenterRegistrationService {
         return out.toByteArray();
     }
 
-    private void sendEmail(String to, Center c, byte[] pdf) throws Exception {
+    private void sendEmail(String to, Center c, byte[] pdf, String loginId, String rawPassword) throws Exception {
         MimeMessage msg = mailSender.get().createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(msg, true);
         helper.setFrom(mailFrom);
         helper.setTo(to);
-        helper.setSubject("MSYEP — Center Registration: " + nz(c.getName()));
-        helper.setText("Dear " + nz(c.getName()) + ",\n\n"
-                + "Your center has been registered on MSYEP.\n\n"
-                + "Center Code: " + nz(c.getCode()) + "\n"
-                + "Center Enrollment Number: " + nz(c.getEnrollmentNumber()) + "\n\n"
-                + "The full registration details are in the attached PDF.\n\nRegards,\nMSYEP");
+        helper.setSubject("MSYEP — Center Registration & Login: " + nz(c.getName()));
+        StringBuilder body = new StringBuilder();
+        body.append("Dear ").append(nz(c.getName())).append(",\n\n")
+                .append("Your center has been registered on MSYEP.\n\n")
+                .append("Center Code: ").append(nz(c.getCode())).append("\n")
+                .append("Center Enrollment Number: ").append(nz(c.getEnrollmentNumber())).append("\n");
+        if (StringUtils.hasText(loginId)) {
+            body.append("\n--- Login credentials (keep confidential) ---\n")
+                    .append("User ID: ").append(loginId).append("\n")
+                    .append("Password: ").append(nz(rawPassword)).append("\n")
+                    .append("Sign in at the MSYEP portal (Staff tab).\n");
+        }
+        body.append("\nThe full registration details are in the attached PDF.\n\nRegards,\nMSYEP");
+        helper.setText(body.toString());
         helper.addAttachment("Center-" + nz(c.getName()) + ".pdf", new ByteArrayResource(pdf));
         mailSender.get().send(msg);
     }

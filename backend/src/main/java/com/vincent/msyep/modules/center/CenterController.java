@@ -1,12 +1,15 @@
 package com.vincent.msyep.modules.center;
 
 import com.vincent.msyep.common.ApiResponse;
+import com.vincent.msyep.config.security.MsyepPrincipal;
 import com.vincent.msyep.modules.center.dto.CenterRegistrationResult;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -25,8 +28,20 @@ public class CenterController {
     }
 
     @GetMapping
-    public ApiResponse<List<Center>> list(@RequestParam(required = false) String zoneId) {
-        return ApiResponse.ok(zoneId == null ? service.findAll() : service.findByZone(zoneId));
+    public ApiResponse<List<Center>> list(@RequestParam(required = false) String zoneId,
+                                          @AuthenticationPrincipal MsyepPrincipal p) {
+        // ZONE → only its own centers; CENTER → only its own center; admins → all (or ?zoneId).
+        if (p != null && "ZONE".equals(p.role()) && StringUtils.hasText(p.zoneId())) {
+            return ApiResponse.ok(service.findByZone(p.zoneId()));
+        }
+        if (p != null && "CENTER".equals(p.role()) && StringUtils.hasText(p.centerId())) {
+            try {
+                return ApiResponse.ok(List.of(service.findById(p.centerId())));
+            } catch (Exception ignored) {
+                return ApiResponse.ok(List.of());
+            }
+        }
+        return ApiResponse.ok(StringUtils.hasText(zoneId) ? service.findByZone(zoneId) : service.findAll());
     }
 
     @GetMapping("/{id}")

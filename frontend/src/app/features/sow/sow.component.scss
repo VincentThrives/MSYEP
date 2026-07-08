@@ -1,0 +1,42 @@
+    h1 { color: var(--green-deep, #0E5132); }
+    .lead { color: #607065; margin: -6px 0 16px; font-size: 14px; }
+
+    /* Cards */
+    .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+    .card { position: relative; text-align: left; cursor: pointer;
+      background: #fff; border: 1px solid #e6ece8; border-radius: 16px; padding: 20px;
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s; }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(14,81,50,.12); border-color: #bfe0cc; }
+    .card.done { background: #f2fbf5; border-color: #bfe9cf; }
+    .card .tick { position: absolute; top: 12px; right: 12px; color: #12b358; }
+    .card .num { font-size: 34px; font-weight: 800; line-height: 1;
+      background: linear-gradient(120deg, var(--portal, #1E7A46), var(--portal-dark, #0E5132));
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .card .label { font-weight: 700; color: #24352b; margin-top: 8px; }
+    .card .status { font-size: 12px; color: #8a9a90; margin-top: 4px; }
+
+    /* Form */
+    .form-panel { background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 18px; }
+    .prog-title { color: #0E5132; margin: 0 0 12px; }
+    .sec { color: #0E5132; margin: 18px 0 8px; font-size: 15px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .row mat-form-field { flex: 1 1 220px; min-width: 180px; }
+    .row.groups mat-form-field { flex: 1 1 160px; min-width: 140px; }
+
+    .person { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap;
+      border: 1px solid #eef2f0; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+    .person-fields { display: flex; gap: 12px; flex-wrap: wrap; flex: 1 1 340px; }
+    .person-fields .grow { flex: 1 1 220px; }
+
+    .photo-block { margin-bottom: 8px; }
+    .ph-label { font-size: 13px; color: #4b5b52; margin-bottom: 6px; }
+    .photo { display: flex; align-items: center; gap: 10px; }
+    .photo img { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; border: 1px solid #dfe7e1; }
+    .ph-actions { display: flex; align-items: center; gap: 4px; }
+
+    .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;
+      padding-top: 14px; border-top: 1px dashed #e3e9e5; }
+
+    .center-pick { display: flex; gap: 12px; flex-wrap: wrap; margin: 4px 0 14px; }
+    .center-pick app-search-select { display: block; flex: 1 1 240px; min-width: 200px; max-width: 340px; }
+    .hint.pad { padding: 8px 0; }

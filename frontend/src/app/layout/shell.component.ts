@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -28,6 +28,19 @@ export class ShellComponent {
   opened = true;
 
   portal = computed(() => portalFor(this.auth.role() ?? 'ADMIN'));
+
+  /** Group labels the user has collapsed; groups are expanded by default. */
+  private collapsed = signal<Set<string>>(new Set());
+
+  isExpanded(label: string): boolean {
+    return !this.collapsed().has(label);
+  }
+
+  toggleGroup(label: string): void {
+    const next = new Set(this.collapsed());
+    next.has(label) ? next.delete(label) : next.add(label);
+    this.collapsed.set(next);
+  }
 
   logout(): void {
     this.auth.logout();

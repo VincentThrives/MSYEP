@@ -35,10 +35,21 @@
     </div>
 
     <div class="form-panel" *ngIf="editing()">
-      <mat-tab-group>
+      <div class="overall" [class.done]="overall() === 100">
+        <div class="overall-top"><span>Overall completion</span><b>{{ overall() }}%</b></div>
+        <div class="wz-bar"><div class="wz-fill" [style.width.%]="overall()"></div></div>
+      </div>
+      <mat-tab-group [selectedIndex]="tabIndex()" (selectedIndexChange)="tabIndex.set($event)">
         <!-- Tab 1: Academic & Type -->
-        <mat-tab label="Academic & Type">
+        <mat-tab>
+          <ng-template mat-tab-label><span class="wz-tl" [class.done]="isComplete('academic')">Academic &amp; Type
+            <mat-icon *ngIf="isComplete('academic')">check_circle</mat-icon>
+            <span *ngIf="!isComplete('academic')" class="pct">{{ progress('academic') }}%</span></span></ng-template>
           <div class="tab">
+            <div class="sec-progress" [class.done]="isComplete('academic')">
+              <div class="wz-bar"><div class="wz-fill" [style.width.%]="progress('academic')"></div></div>
+              <span class="lbl">{{ progress('academic') }}% complete</span>
+            </div>
             <div class="row">
               <app-search-select label="Academic Year" [options]="academicYearList"
                 [(value)]="form.academicYear"></app-search-select>
@@ -51,7 +62,12 @@
               <app-search-select label="Select Center Type" [options]="centerTypes"
                 [(value)]="form.centerType"></app-search-select>
               <mat-form-field appearance="outline"><mat-label>College / Center Name</mat-label>
-                <input matInput [(ngModel)]="form.name" placeholder="Select or type a new college" /></mat-form-field>
+                <input matInput [(ngModel)]="form.name" [matAutocomplete]="collegeAuto"
+                  placeholder="Select a college or type a new one" />
+                <mat-autocomplete #collegeAuto="matAutocomplete">
+                  <mat-option *ngFor="let c of collegeSuggestions()" [value]="c">{{ c }}</mat-option>
+                </mat-autocomplete>
+              </mat-form-field>
             </div>
             <div class="row">
               <mat-form-field appearance="outline"><mat-label>User ID</mat-label>
@@ -68,8 +84,15 @@
         </mat-tab>
 
         <!-- Tab 2: Center Location -->
-        <mat-tab label="Center Location">
+        <mat-tab>
+          <ng-template mat-tab-label><span class="wz-tl" [class.done]="isComplete('location')">Center Location
+            <mat-icon *ngIf="isComplete('location')">check_circle</mat-icon>
+            <span *ngIf="!isComplete('location')" class="pct">{{ progress('location') }}%</span></span></ng-template>
           <div class="tab">
+            <div class="sec-progress" [class.done]="isComplete('location')">
+              <div class="wz-bar"><div class="wz-fill" [style.width.%]="progress('location')"></div></div>
+              <span class="lbl">{{ progress('location') }}% complete</span>
+            </div>
             <div class="row">
               <mat-form-field appearance="outline">
                 <mat-label>Center District</mat-label>
@@ -115,8 +138,15 @@
         </mat-tab>
 
         <!-- Tab 3: Center Details -->
-        <mat-tab label="Center Details">
+        <mat-tab>
+          <ng-template mat-tab-label><span class="wz-tl" [class.done]="isComplete('details')">Center Details
+            <mat-icon *ngIf="isComplete('details')">check_circle</mat-icon>
+            <span *ngIf="!isComplete('details')" class="pct">{{ progress('details') }}%</span></span></ng-template>
           <div class="tab">
+            <div class="sec-progress" [class.done]="isComplete('details')">
+              <div class="wz-bar"><div class="wz-fill" [style.width.%]="progress('details')"></div></div>
+              <span class="lbl">{{ progress('details') }}% complete</span>
+            </div>
             <div class="allot">
               <div class="auto-field"><span class="k">Center Code</span>
                 <span class="v mono">{{ form.code || 'Auto: CENTER-' + year + '-NNNN' }}</span></div>
@@ -189,8 +219,15 @@
         </mat-tab>
 
         <!-- Tab 4: Course Details -->
-        <mat-tab label="Course Details">
+        <mat-tab>
+          <ng-template mat-tab-label><span class="wz-tl" [class.done]="isComplete('courses')">Course Details
+            <mat-icon *ngIf="isComplete('courses')">check_circle</mat-icon>
+            <span *ngIf="!isComplete('courses')" class="pct">{{ progress('courses') }}%</span></span></ng-template>
           <div class="tab">
+            <div class="sec-progress" [class.done]="isComplete('courses')">
+              <div class="wz-bar"><div class="wz-fill" [style.width.%]="progress('courses')"></div></div>
+              <span class="lbl">{{ progress('courses') }}% complete</span>
+            </div>
             <div class="row">
               <mat-form-field appearance="outline" class="wide">
                 <mat-label>Enter your Center Courses</mat-label>
@@ -221,8 +258,15 @@
         </mat-tab>
 
         <!-- Tab 5: MOU Details -->
-        <mat-tab label="MOU Details">
+        <mat-tab>
+          <ng-template mat-tab-label><span class="wz-tl" [class.done]="isComplete('mou')">MOU Details
+            <mat-icon *ngIf="isComplete('mou')">check_circle</mat-icon>
+            <span *ngIf="!isComplete('mou')" class="pct">{{ progress('mou') }}%</span></span></ng-template>
           <div class="tab">
+            <div class="sec-progress" [class.done]="isComplete('mou')">
+              <div class="wz-bar"><div class="wz-fill" [style.width.%]="progress('mou')"></div></div>
+              <span class="lbl">{{ progress('mou') }}% complete</span>
+            </div>
             <div class="row">
               <mat-form-field appearance="outline"><mat-label>MOU Date (from)</mat-label>
                 <input matInput type="date" [(ngModel)]="form.dateOfMou" /></mat-form-field>
@@ -235,8 +279,15 @@
         </mat-tab>
 
         <!-- Tab 6: Documents -->
-        <mat-tab label="Documents">
+        <mat-tab>
+          <ng-template mat-tab-label><span class="wz-tl" [class.done]="isComplete('documents')">Documents
+            <mat-icon *ngIf="isComplete('documents')">check_circle</mat-icon>
+            <span *ngIf="!isComplete('documents')" class="pct">{{ progress('documents') }}%</span></span></ng-template>
           <div class="tab">
+            <div class="sec-progress" [class.done]="isComplete('documents')">
+              <div class="wz-bar"><div class="wz-fill" [style.width.%]="progress('documents')"></div></div>
+              <span class="lbl">{{ progress('documents') }}% complete</span>
+            </div>
             <ng-container *ngFor="let g of docGroups">
               <h3 class="sec">{{ g.title }}</h3>
               <div class="docs">
@@ -256,15 +307,35 @@
         </mat-tab>
       </mat-tab-group>
 
-      <div class="form-actions">
+      <div class="wizard-actions">
         <button mat-button (click)="editing.set(false)">Cancel</button>
-        <button mat-flat-button color="primary" (click)="save()" [disabled]="saving()">
-          {{ form.id ? 'Save' : 'Submit' }}
-        </button>
+        <span class="spacer"></span>
+        <button mat-stroked-button *ngIf="tabIndex() > 0" (click)="goTo(tabIndex() - 1)">
+          <mat-icon>arrow_back</mat-icon> Back</button>
+        <button mat-flat-button color="primary" *ngIf="!isLastTab" (click)="goTo(tabIndex() + 1)">
+          Next <mat-icon>arrow_forward</mat-icon></button>
+        <button mat-flat-button color="primary" *ngIf="isLastTab" (click)="save()" [disabled]="saving()">
+          <mat-icon>check</mat-icon> {{ form.id ? 'Save' : 'Submit' }}</button>
       </div>
     </div>
 
-    <table mat-table [dataSource]="centers()" class="mat-elevation-z1 full">
+    <ng-container *ngIf="!editing()">
+    <div class="list-filters">
+      <app-search-select label="District" [options]="districtOptions()" [emptyOption]="true"
+        [value]="fDistrict()" (valueChange)="fDistrict.set($event || ''); fTaluk.set(''); fGp.set('')"></app-search-select>
+      <app-search-select label="Taluk" [options]="talukOptions()" [emptyOption]="true"
+        [value]="fTaluk()" (valueChange)="fTaluk.set($event || ''); fGp.set('')"></app-search-select>
+      <app-search-select label="Gram Panchayat" [options]="gpOptions()" [emptyOption]="true"
+        [value]="fGp()" (valueChange)="fGp.set($event || '')"></app-search-select>
+      <mat-form-field appearance="outline">
+        <mat-label>Search center / principal</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput [ngModel]="fSearch()" (ngModelChange)="fSearch.set($event)" />
+      </mat-form-field>
+      <button mat-stroked-button class="clear" (click)="clearFilters()"><mat-icon>clear</mat-icon> Clear</button>
+    </div>
+
+    <table mat-table [dataSource]="filtered()" class="mat-elevation-z1 full">
       <ng-container matColumnDef="name">
         <th mat-header-cell *matHeaderCellDef>Center</th>
         <td mat-cell *matCellDef="let c">{{ c.name }}</td>
@@ -297,5 +368,6 @@
       <tr mat-header-row *matHeaderRowDef="cols"></tr>
       <tr mat-row *matRowDef="let row; columns: cols"></tr>
     </table>
-    <p *ngIf="!centers().length" class="empty">No centers yet.</p>
+    <p *ngIf="!filtered().length" class="empty">No centers match the current filters.</p>
+    </ng-container>
   

@@ -1,12 +1,14 @@
 package com.vincent.msyep.modules.student;
 
 import com.vincent.msyep.common.ApiResponse;
+import com.vincent.msyep.config.security.MsyepPrincipal;
 import com.vincent.msyep.modules.student.dto.StudentRegistrationResult;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -27,6 +29,23 @@ public class StudentController {
         this.export = export;
     }
 
+    /**
+     * Data scope for the current login:
+     * CENTER → only its own center's students, ZONE → only its zone's students,
+     * STUDENT → only its own record, ADMIN/SUPER_ADMIN → everything (respect explicit filters).
+     */
+    private record Scope(String centerId, String zoneId, String studentId) {}
+
+    private Scope scope(MsyepPrincipal p, String requestedCenterId) {
+        if (p == null) return new Scope(requestedCenterId, null, null);
+        return switch (p.role()) {
+            case "CENTER" -> new Scope(p.centerId(), null, null);
+            case "ZONE" -> new Scope(null, p.zoneId(), null);
+            case "STUDENT" -> new Scope(null, null, p.studentId());
+            default -> new Scope(requestedCenterId, null, null);
+        };
+    }
+
     /** Filtered list for the View Students page. */
     @GetMapping("/filter")
     public ApiResponse<List<Student>> filter(
@@ -34,8 +53,10 @@ public class StudentController {
             @RequestParam(required = false) String taluk,
             @RequestParam(required = false) String gramPanchayat,
             @RequestParam(required = false) String centerId,
-            @RequestParam(required = false) String caste) {
-        return ApiResponse.ok(export.filter(district, taluk, gramPanchayat, centerId, caste));
+            @RequestParam(required = false) String caste,
+            @AuthenticationPrincipal MsyepPrincipal principal) {
+        Scope s = scope(principal, centerId);
+        return ApiResponse.ok(export.filter(district, taluk, gramPanchayat, s.centerId(), s.zoneId(), s.studentId(), caste));
     }
 
     /** Export filtered students to Excel. */
@@ -45,8 +66,10 @@ public class StudentController {
             @RequestParam(required = false) String taluk,
             @RequestParam(required = false) String gramPanchayat,
             @RequestParam(required = false) String centerId,
-            @RequestParam(required = false) String caste) {
-        byte[] xlsx = export.toExcel(export.filter(district, taluk, gramPanchayat, centerId, caste));
+            @RequestParam(required = false) String caste,
+            @AuthenticationPrincipal MsyepPrincipal principal) {
+        Scope s = scope(principal, centerId);
+        byte[] xlsx = export.toExcel(export.filter(district, taluk, gramPanchayat, s.centerId(), s.zoneId(), s.studentId(), caste));
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=students.xlsx")
                 .contentType(MediaType.parseMediaType(
@@ -67,8 +90,10 @@ public class StudentController {
     public record DocsRequest(List<String> studentIds, String docType) {}
 
     @GetMapping
-    public ApiResponse<List<Student>> list(@RequestParam(required = false) String centerId) {
-        return ApiResponse.ok(centerId == null ? service.findAll() : service.findByCenter(centerId));
+    public ApiResponse<List<Student>> list(@RequestParam(required = false) String centerId,
+                                           @AuthenticationPrincipal MsyepPrincipal principal) {
+        Scope s = scope(principal, centerId);
+        return ApiResponse.ok(export.filter(null, null, null, s.centerId(), s.zoneId(), s.studentId(), null));
     }
 
     @GetMapping("/{id}")

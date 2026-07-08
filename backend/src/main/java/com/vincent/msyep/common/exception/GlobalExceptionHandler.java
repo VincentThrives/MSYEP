@@ -4,7 +4,10 @@ import com.vincent.msyep.common.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -38,6 +41,15 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> denied(AccessDeniedException ex) {
+        Authentication authn = SecurityContextHolder.getContext().getAuthentication();
+        boolean anonymous = authn == null || !authn.isAuthenticated()
+                || authn instanceof AnonymousAuthenticationToken;
+        // No (or expired/invalid) token → 401 so the client redirects to login;
+        // authenticated-but-wrong-role → 403.
+        if (anonymous) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Your session has expired — please sign in again."));
+        }
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Access denied"));
     }
 

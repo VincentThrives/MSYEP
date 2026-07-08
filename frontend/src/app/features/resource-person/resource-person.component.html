@@ -1,0 +1,63 @@
+    <div class="head">
+      <h1>Resource Persons</h1>
+    </div>
+    <p class="lead">Request guest resource persons for your KP-MSYEP programme. Choose the
+      department / organization for each; on submit a request letter is generated.</p>
+
+    <!-- Admin: Zone → Center. Zone login: only Center. -->
+    <div class="center-pick" *ngIf="!isCenter">
+      <app-search-select *ngIf="isAdmin" label="Select Zone (University)" [options]="zones()" valueKey="id"
+        labelKey="name" [value]="selectedZoneId()" (valueChange)="onZone($event)"></app-search-select>
+      <app-search-select label="Select Center (College)" [options]="centersForPicker()" valueKey="id"
+        labelKey="name" [disabled]="isAdmin && !selectedZoneId()"
+        [value]="selectedCenterId()" (valueChange)="onCenter($event)"></app-search-select>
+    </div>
+    <p class="hint" *ngIf="!ready">
+      {{ isAdmin ? 'Select a zone and center to raise its resource-person request.' : 'Select a center to raise its resource-person request.' }}
+    </p>
+
+    <div class="panel" *ngIf="ready">
+      <div class="row">
+        <mat-form-field appearance="outline" class="count">
+          <mat-label>No. of resource persons required</mat-label>
+          <input matInput type="number" min="1" [max]="MAX" [(ngModel)]="count"
+            (ngModelChange)="syncRows()" />
+        </mat-form-field>
+        <span class="hint">Up to {{ MAX }}.</span>
+      </div>
+
+      <div class="person" *ngFor="let p of persons; let i = index">
+        <div class="person-no">{{ i + 1 }}</div>
+        <div class="person-fields">
+          <mat-form-field appearance="outline" class="org">
+            <mat-label>Department / Organization</mat-label>
+            <mat-select [(ngModel)]="p.organization">
+              <mat-optgroup *ngFor="let g of orgGroups" [label]="g.group">
+                <mat-option *ngFor="let o of g.items" [value]="o">{{ o }}</mat-option>
+              </mat-optgroup>
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Resource Person Name</mat-label>
+            <input matInput [(ngModel)]="p.name" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Designation</mat-label>
+            <input matInput [(ngModel)]="p.designation" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Phone</mat-label>
+            <input matInput [(ngModel)]="p.phone" />
+          </mat-form-field>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button mat-stroked-button [disabled]="saving()" (click)="save()">
+          <mat-icon>save</mat-icon> Save
+        </button>
+        <button mat-flat-button color="primary" [disabled]="saving()" (click)="submitLetter()">
+          <mat-icon>description</mat-icon> Submit &amp; Get Letter
+        </button>
+      </div>
+    </div>

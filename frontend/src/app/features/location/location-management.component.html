@@ -1,0 +1,121 @@
+    <div class="head">
+      <h1>Location Management</h1>
+    </div>
+    <p class="lead">Add districts, taluks and villages / gram panchayats. New entries appear in
+      <b>every</b> district / taluk / gram-panchayat dropdown across the portal.</p>
+
+    <div class="panel">
+      <mat-tab-group>
+        <!-- DISTRICT -->
+        <mat-tab label="Add District">
+          <div class="tab">
+            <h3 class="sec">District <span>| Add New District</span></h3>
+            <div class="row">
+              <mat-form-field appearance="outline"><mat-label>State</mat-label>
+                <input matInput [value]="state" disabled /></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>District Name</mat-label>
+                <input matInput [(ngModel)]="newDistrict" (keyup.enter)="submitDistrict()"
+                  placeholder="e.g. Mysuru" /></mat-form-field>
+            </div>
+            <button mat-flat-button color="primary" [disabled]="saving()" (click)="submitDistrict()">
+              <mat-icon>add</mat-icon> Submit
+            </button>
+
+            <h4 class="existing">Existing districts ({{ districts().length }})</h4>
+            <div class="loc-list">
+              <div class="loc-item" *ngFor="let d of districts()">
+                <ng-container *ngIf="editingDistrict() === d; else showD">
+                  <input class="edit-in" [(ngModel)]="editName" (keyup.enter)="saveDistrict(d)" autofocus />
+                  <button mat-icon-button color="primary" (click)="saveDistrict(d)"><mat-icon>check</mat-icon></button>
+                  <button mat-icon-button (click)="editingDistrict.set(null)"><mat-icon>close</mat-icon></button>
+                </ng-container>
+                <ng-template #showD>
+                  <span class="loc-name">{{ d }}</span>
+                  <button mat-icon-button (click)="startEditDistrict(d)"><mat-icon>edit</mat-icon></button>
+                  <button mat-icon-button color="warn" (click)="removeDistrict(d)"><mat-icon>delete</mat-icon></button>
+                </ng-template>
+              </div>
+              <span class="muted" *ngIf="!districts().length">None yet.</span>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- TALUK -->
+        <mat-tab label="Add Taluk">
+          <div class="tab">
+            <h3 class="sec">Taluk <span>| Add New Taluk</span></h3>
+            <div class="row">
+              <mat-form-field appearance="outline"><mat-label>State</mat-label>
+                <input matInput [value]="state" disabled /></mat-form-field>
+              <app-search-select label="District" [options]="districts()"
+                [value]="tDistrict()" (valueChange)="onTDistrict($event)"></app-search-select>
+              <mat-form-field appearance="outline"><mat-label>Taluk Name</mat-label>
+                <input matInput [(ngModel)]="newTaluk" (keyup.enter)="submitTaluk()"
+                  placeholder="e.g. Hunsur" /></mat-form-field>
+            </div>
+            <button mat-flat-button color="primary" [disabled]="saving()" (click)="submitTaluk()">
+              <mat-icon>add</mat-icon> Submit
+            </button>
+
+            <ng-container *ngIf="tDistrict()">
+              <h4 class="existing">Taluks in {{ tDistrict() }} ({{ tTaluks().length }})</h4>
+              <div class="loc-list">
+                <div class="loc-item" *ngFor="let t of tTaluks()">
+                  <ng-container *ngIf="editingTaluk() === t; else showT">
+                    <input class="edit-in" [(ngModel)]="editName" (keyup.enter)="saveTaluk(t)" />
+                    <button mat-icon-button color="primary" (click)="saveTaluk(t)"><mat-icon>check</mat-icon></button>
+                    <button mat-icon-button (click)="editingTaluk.set(null)"><mat-icon>close</mat-icon></button>
+                  </ng-container>
+                  <ng-template #showT>
+                    <span class="loc-name">{{ t }}</span>
+                    <button mat-icon-button (click)="startEditTaluk(t)"><mat-icon>edit</mat-icon></button>
+                    <button mat-icon-button color="warn" (click)="removeTaluk(t)"><mat-icon>delete</mat-icon></button>
+                  </ng-template>
+                </div>
+                <span class="muted" *ngIf="!tTaluks().length">None yet.</span>
+              </div>
+            </ng-container>
+          </div>
+        </mat-tab>
+
+        <!-- VILLAGE / GP -->
+        <mat-tab label="Add Village / GP">
+          <div class="tab">
+            <h3 class="sec">Village / GP <span>| Add New Village / GP</span></h3>
+            <div class="row">
+              <mat-form-field appearance="outline"><mat-label>State</mat-label>
+                <input matInput [value]="state" disabled /></mat-form-field>
+              <app-search-select label="District" [options]="districts()"
+                [value]="gDistrict()" (valueChange)="onGDistrict($event)"></app-search-select>
+              <app-search-select label="Taluk" [options]="gTaluks()"
+                [value]="gTaluk()" (valueChange)="onGTaluk($event)"></app-search-select>
+              <mat-form-field appearance="outline"><mat-label>Village / GP Name</mat-label>
+                <input matInput [(ngModel)]="newGp" (keyup.enter)="submitGp()"
+                  placeholder="e.g. Hanagodu" /></mat-form-field>
+            </div>
+            <button mat-flat-button color="primary" [disabled]="saving()" (click)="submitGp()">
+              <mat-icon>add</mat-icon> Submit
+            </button>
+
+            <ng-container *ngIf="gDistrict() && gTaluk()">
+              <h4 class="existing">Villages / GPs in {{ gTaluk() }} ({{ gGps().length }})</h4>
+              <div class="loc-list">
+                <div class="loc-item" *ngFor="let g of gGps()">
+                  <ng-container *ngIf="editingGp() === g; else showG">
+                    <input class="edit-in" [(ngModel)]="editName" (keyup.enter)="saveGp(g)" />
+                    <button mat-icon-button color="primary" (click)="saveGp(g)"><mat-icon>check</mat-icon></button>
+                    <button mat-icon-button (click)="editingGp.set(null)"><mat-icon>close</mat-icon></button>
+                  </ng-container>
+                  <ng-template #showG>
+                    <span class="loc-name">{{ g }}</span>
+                    <button mat-icon-button (click)="startEditGp(g)"><mat-icon>edit</mat-icon></button>
+                    <button mat-icon-button color="warn" (click)="removeGp(g)"><mat-icon>delete</mat-icon></button>
+                  </ng-template>
+                </div>
+                <span class="muted" *ngIf="!gGps().length">None yet.</span>
+              </div>
+            </ng-container>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+    </div>

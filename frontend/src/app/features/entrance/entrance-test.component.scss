@@ -17,6 +17,9 @@
     .q { padding: 16px; margin: 12px 0; }
     .q-text { margin-bottom: 10px; }
     .opts { display: flex; flex-direction: column; gap: 6px; }
+    .taken-banner { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: #0E5132;
+      background: #e7f3ec; border: 1px solid #cfe9d8; border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
+    .taken-banner mat-icon { color: #1E7A46; font-size: 20px; height: 20px; width: 20px; }
     .result { display: flex; align-items: center; gap: 16px; padding: 12px 0; }
     .result mat-icon { font-size: 48px; height: 48px; width: 48px; }
     .result.pass { color: #1E7A46; } .result.fail { color: #c62828; }

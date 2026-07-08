@@ -24,6 +24,159 @@ export interface AuthResponse {
   studentId?: string;
 }
 
+export interface OtpRequestResult {
+  sent: boolean;
+  target: string;
+  message: string;
+  /** Populated only when no mail/SMS channel is configured (local/dev). */
+  devOtp?: string;
+}
+
+export interface IdName {
+  id: string;
+  name: string;
+}
+
+export interface SowSubmission {
+  id?: string;
+  centerId?: string;
+  programIndex: number;
+  fields: Record<string, string>;
+  photos: Record<string, string>;
+}
+
+export interface CvMissingField {
+  label: string;
+  tab: number;
+}
+export interface CvStatus {
+  complete: boolean;
+  missing: CvMissingField[];
+  paid: boolean;
+}
+export interface CvOrder {
+  orderId: string | null;
+  amountPaise: number;
+  currency: string;
+  keyId: string;
+  stub: boolean;
+  alreadyPaid: boolean;
+}
+
+export interface ResourcePerson {
+  organization?: string;
+  name?: string;
+  designation?: string;
+  phone?: string;
+}
+
+export interface ResourcePersonRequest {
+  id?: string;
+  centerId?: string;
+  countRequired: number;
+  persons: ResourcePerson[];
+}
+
+/** Guest resource-person organizations, grouped by sector (for the dropdown). */
+export const RESOURCE_ORG_GROUPS: { group: string; items: string[] }[] = [
+  {
+    group: 'Karnataka State Government Departments',
+    items: [
+      'Department of Information Technology, Biotechnology, and Science & Technology (IT-BT)',
+      'Department of Industries and Commerce',
+      'Department of Skill Development, Entrepreneurship and Livelihood (SDEL)',
+      'Department of Higher Education',
+      'Department of Collegiate and Technical Education (DCTE)',
+      'Department of Primary & Secondary Education',
+      'Department of Employment and Training (DET)',
+      'Department of Labour',
+      'Department of Agriculture',
+      'Department of Rural Development & Panchayat Raj',
+      'Department of Youth Empowerment and Sports',
+      'Karnataka State Innovation Council',
+      'Department of Finance',
+      'Department of Women & Child Development',
+    ],
+  },
+  {
+    group: 'Technology & Innovation Institutions',
+    items: [
+      'Karnataka Innovation and Technology Society (KITS)',
+      'Karnataka StartUp Cell',
+      'K-Tech Innovation Hubs',
+      'Karnataka Biotechnology & Information Technology Services (KBITS)',
+      'Centre for Smart Governance (CSG)',
+      'Karnataka State Electronics Development Corporation (KEONICS)',
+      'STPI Bengaluru',
+      'IIIT Bangalore',
+      'C-DAC Bengaluru',
+    ],
+  },
+  {
+    group: 'Entrepreneurship & Start-up Support',
+    items: [
+      'Startup Karnataka',
+      'Karnataka Digital Economy Mission (KDEM)',
+      'Deshpande Startups (Hubballi)',
+      'IIM Bangalore NSRCEL',
+      'TiE Bangalore',
+      'NASSCOM 10,000 Startups',
+      'SIDBI (Small Industries Development Bank of India)',
+      'MSME-DI Bengaluru',
+      'Rural Self Employment Training Institutes (RSETI)',
+    ],
+  },
+  {
+    group: 'Banking & Financial Sector',
+    items: [
+      'Karnataka Bank',
+      'Canara Bank',
+      'State Bank of India (SBI)',
+      'Bank of Baroda (formerly Vijaya Bank)',
+      'NABARD',
+      'Karnataka State Financial Corporation (KSFC)',
+      'Mudra Yojana (via banks)',
+      'Cooperative Banks & Grameena Banks',
+    ],
+  },
+  {
+    group: 'Other Key Sectors',
+    items: [
+      'Skill India Mission',
+      'KSWDC (Women Development Corporation)',
+      'AgriTech Startups',
+      'Department of Tourism / KSTDC',
+      'NIMHANS Innovation Centre',
+      'Ayushman Bharat Digital Mission',
+      'Karnataka State Pollution Control Board (KSPCB)',
+      'Renewable Energy Department',
+      'CERT-In (Bengaluru node)',
+      'Peenya Industrial Association',
+      'Electronic City Industries Association',
+    ],
+  },
+];
+
+export interface StudentSelfRegisterRequest {
+  name: string;
+  phone: string;
+  email?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  educationalQualification?: string;
+  zoneId?: string;
+  centerId?: string;
+  district?: string;
+  taluk?: string;
+  gramPanchayat?: string;
+}
+
+export interface StudentSelfRegisterResult {
+  registerNo: string;
+  loginId: string;
+  message: string;
+}
+
 export interface ZoneDocument {
   type: string;
   label: string;
@@ -109,10 +262,10 @@ export const INVESTMENT_CAPACITY = ['Below 1 Lakh', '1–5 Lakhs', '5–10 Lakhs
 export const START_TIMELINE = ['Immediately', 'Within 3 months', 'Within 6 months', 'Later'];
 
 export const MEMBERSHIP_TIERS: { name: string; amount: number }[] = [
-  { name: 'Silver', amount: 50000 },
-  { name: 'Gold', amount: 75000 },
-  { name: 'Platinum', amount: 100000 },
-  { name: 'Diamond', amount: 125000 },
+  { name: 'Silver', amount: 75000 },
+  { name: 'Gold', amount: 100000 },
+  { name: 'Platinum', amount: 125000 },
+  { name: 'Diamond', amount: 150000 },
 ];
 
 /** Franchise document upload slots. */

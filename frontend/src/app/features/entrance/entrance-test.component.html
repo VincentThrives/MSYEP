@@ -56,6 +56,11 @@
 
     <!-- RESULT -->
     <mat-card class="card" *ngIf="state() === 'result' && result() as r">
+      <div class="taken-banner" *ngIf="alreadyTaken()">
+        <mat-icon>info</mat-icon>
+        You have completed the entrance test. Only one attempt is allowed — this is your final result.
+        A copy is sent to your registered WhatsApp number.
+      </div>
       <div class="result" [class.pass]="r.passed" [class.fail]="!r.passed">
         <mat-icon>{{ r.passed ? 'verified' : 'cancel' }}</mat-icon>
         <div>
@@ -76,7 +81,9 @@
       </div>
       <div class="actions">
         <button mat-stroked-button (click)="downloadResult(r)"><mat-icon>picture_as_pdf</mat-icon> Download Result</button>
-        <button mat-flat-button color="primary" (click)="reset()"><mat-icon>replay</mat-icon> Take Again</button>
+        <!-- Retake is only offered to admin/staff running tests, never to a one-time student. -->
+        <button mat-flat-button color="primary" *ngIf="!alreadyTaken() && !lockedStudent()"
+          (click)="reset()"><mat-icon>replay</mat-icon> Take Again</button>
       </div>
     </mat-card>
   

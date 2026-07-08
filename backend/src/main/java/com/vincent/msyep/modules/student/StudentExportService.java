@@ -47,12 +47,14 @@ public class StudentExportService {
 
     /** Filtered student query for the View Students / Download pages. */
     public List<Student> filter(String district, String taluk, String gramPanchayat,
-                                String centerId, String caste) {
+                                String centerId, String zoneId, String studentId, String caste) {
         Query q = new Query();
         if (StringUtils.hasText(district)) q.addCriteria(Criteria.where("district").is(district));
         if (StringUtils.hasText(taluk)) q.addCriteria(Criteria.where("taluk").is(taluk));
         if (StringUtils.hasText(gramPanchayat)) q.addCriteria(Criteria.where("gramPanchayat").is(gramPanchayat));
         if (StringUtils.hasText(centerId)) q.addCriteria(Criteria.where("centerId").is(centerId));
+        if (StringUtils.hasText(zoneId)) q.addCriteria(Criteria.where("zoneId").is(zoneId));
+        if (StringUtils.hasText(studentId)) q.addCriteria(Criteria.where("_id").is(studentId));
         if (StringUtils.hasText(caste)) q.addCriteria(Criteria.where("caste").is(caste));
         return mongo.find(q, Student.class);
     }

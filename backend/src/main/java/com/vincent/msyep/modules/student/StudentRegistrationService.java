@@ -11,8 +11,9 @@ import org.springframework.util.StringUtils;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.UUID;
 
-/** Student registration: auto MSYEP Register No + Batch Code, and a STUDENT login. */
+/** Student registration: auto MSYEP Register No + Batch Code, and an OTP-only STUDENT login. */
 @Service
 public class StudentRegistrationService {
 
@@ -39,23 +40,22 @@ public class StudentRegistrationService {
         String registerNo = String.format("MSYEP%d%06d", year, seq);
         String batchCode = String.format("BATCH-%d-%03d", year, seq);
 
-        String rawPassword = input.getPassword();
+        // Students authenticate by OTP only — no password is ever collected or stored.
         String userId = input.getUserId();
-
         input.setId(null);
         input.setRegisterNo(registerNo);
         input.setBatchCode(batchCode);
         input.setCreatedAt(Instant.now());
         input.setPassword(null); // never persist plaintext
 
-        String loginId = null;
-        boolean wantsLogin = StringUtils.hasText(userId) && StringUtils.hasText(rawPassword);
+        // The login key (User.email) is the given User ID, else the student's email, else phone.
+        String loginId = firstNonBlank(userId, input.getEmail(), input.getPhone());
+        boolean wantsLogin = StringUtils.hasText(loginId);
         if (wantsLogin) {
-            String email = userId.toLowerCase().trim();
-            if (users.existsByEmail(email)) {
-                throw new IllegalArgumentException("User ID already in use: " + email);
+            loginId = loginId.toLowerCase().trim();
+            if (users.existsByEmail(loginId)) {
+                throw new IllegalArgumentException("User ID already in use: " + loginId);
             }
-            loginId = email;
         }
 
         Student saved = students.save(input);
@@ -64,7 +64,8 @@ public class StudentRegistrationService {
             User u = users.save(User.builder()
                     .name(saved.getName())
                     .email(loginId)
-                    .passwordHash(encoder.encode(rawPassword))
+                    // Random unusable hash — student logins go through OTP, never a password.
+                    .passwordHash(encoder.encode(UUID.randomUUID().toString()))
                     .role(Role.STUDENT)
                     .studentId(saved.getId())
                     .centerId(saved.getCenterId())
@@ -75,8 +76,15 @@ public class StudentRegistrationService {
         }
 
         String note = wantsLogin
-                ? "Student registered with login " + loginId + "."
-                : "Student registered (no login credentials provided).";
+                ? "Student registered. OTP login enabled for " + loginId + "."
+                : "Student registered (no email/mobile provided — OTP login unavailable).";
         return new StudentRegistrationResult(saved, registerNo, batchCode, loginId, note);
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String v : values) {
+            if (StringUtils.hasText(v)) return v;
+        }
+        return null;
     }
 }

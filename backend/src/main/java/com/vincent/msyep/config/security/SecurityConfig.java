@@ -36,6 +36,9 @@ public class SecurityConfig {
 
     private static final String[] PUBLIC = {
             "/api/v1/auth/login",
+            "/api/v1/auth/register",
+            "/api/v1/auth/otp/**",
+            "/api/v1/public/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/v3/api-docs/**",
@@ -51,6 +54,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(PUBLIC).permitAll()
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // Location master lookups are public (needed by the student self-registration form)
+                .requestMatchers(HttpMethod.GET, "/api/v1/locations/**").permitAll()
                 // User management: super admin / admin only
                 .requestMatchers("/api/v1/users/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                 // Zone writes: super admin / admin; reads allowed to authenticated (scoped in service)
@@ -64,8 +69,22 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/staff/**").hasAnyRole("SUPER_ADMIN", "ADMIN", "STAFF", "ZONE", "CENTER")
                 .anyRequest().authenticated()
             )
+            .exceptionHandling(ex -> ex
+                // Unauthenticated (missing / expired / invalid token) → 401 JSON so the
+                // client redirects to login. Authenticated-but-forbidden → 403 JSON.
+                .authenticationEntryPoint((req, res, e) -> writeError(res, 401,
+                        "Your session has expired - please sign in again."))
+                .accessDeniedHandler((req, res, e) -> writeError(res, 403, "Access denied")))
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    private static void writeError(jakarta.servlet.http.HttpServletResponse res, int status, String message)
+            throws java.io.IOException {
+        res.setStatus(status);
+        res.setContentType("application/json");
+        res.setCharacterEncoding("UTF-8");
+        res.getWriter().write("{\"success\":false,\"message\":\"" + message + "\",\"data\":null}");
     }
 
     @Bean
@@ -74,6 +93,7 @@ public class SecurityConfig {
         config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Content-Disposition", "X-Sow-Note"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

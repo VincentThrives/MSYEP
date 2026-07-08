@@ -37,6 +37,11 @@ app:
     super-admin-email: ${SEED_SUPERADMIN_EMAIL:superadmin@msyep.in}
     super-admin-password: ${SEED_SUPERADMIN_PASSWORD:Admin@12345}
 
+# Razorpay (CV ₹90 payment). Leave blank → stub mode (auto-confirm, for testing).
+razorpay:
+  key-id: ${RAZORPAY_KEY_ID:}
+  key-secret: ${RAZORPAY_KEY_SECRET:}
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

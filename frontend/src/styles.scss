@@ -27,6 +27,43 @@ body {
 
 h1 { color: var(--green-deep); }
 
+/* Page headers: keep the action button intact; wrap the row (not the label) when tight. */
+.head { gap: 16px; flex-wrap: wrap; }
+.head > button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.head > button .mat-icon,
+.head > button mat-icon { margin-right: 4px; }
+
+/* ----- Shared multi-step "wizard" progress (Create forms) ----- */
+.form-panel .overall { margin: 4px 0 12px; }
+.form-panel .overall-top { display: flex; justify-content: space-between; font-size: 13px; color: #4b5b52; margin-bottom: 5px; }
+.form-panel .overall-top b { color: var(--portal-dark, #0E5132); }
+.form-panel .wz-bar { height: 8px; background: #e9eef0; border-radius: 6px; overflow: hidden; }
+.form-panel .wz-bar .wz-fill { height: 100%; border-radius: 6px; transition: width .35s ease;
+  background: linear-gradient(90deg, var(--portal, #1E7A46), var(--portal-dark, #0E5132)); }
+.form-panel .overall.done .wz-fill,
+.form-panel .sec-progress.done .wz-fill { background: linear-gradient(90deg, #12b358, #2fd07a); }
+.form-panel .sec-progress { display: flex; align-items: center; gap: 10px; margin: 2px 0 10px; }
+.form-panel .sec-progress .wz-bar { flex: 1; }
+.form-panel .sec-progress .lbl { font-size: 12px; color: #6b7d72; min-width: 92px; text-align: right; }
+.form-panel .sec-progress.done .lbl { color: #147a3d; font-weight: 700; }
+.wz-tl { display: inline-flex; align-items: center; gap: 6px; }
+.wz-tl mat-icon { font-size: 18px; height: 18px; width: 18px; color: #12b358; }
+.wz-tl.done { color: #12b358; font-weight: 700; }
+.wz-tl .pct { font-size: 11px; font-weight: 700; color: #185FA5; background: #eaf2fb;
+  border-radius: 10px; padding: 1px 7px; }
+.wizard-actions { display: flex; align-items: center; gap: 8px; margin-top: 16px;
+  padding-top: 12px; border-top: 1px dashed #e3e9e5; }
+.wizard-actions .spacer { flex: 1; }
+
+/* ----- Shared list filters (View pages) ----- */
+.list-filters { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 4px 0 14px; }
+.list-filters app-search-select,
+.list-filters mat-form-field { flex: 1 1 190px; min-width: 160px; }
+.list-filters .clear { flex: 0 0 auto; }
+
 /* ----- Per-portal accent colors -----
    Each portal keeps its identity colour; gold is woven into every toolbar. */
 .theme-admin   { --portal: #1E7A46; --portal-dark: #0E5132; } /* green  */
@@ -34,6 +71,7 @@ h1 { color: var(--green-deep); }
 .theme-center  { --portal: #D6336C; --portal-dark: #A61E4D; } /* pink   */
 .theme-student { --portal: #1E7A46; --portal-dark: #0E5132; } /* green  */
 .theme-finance { --portal: #C9A227; --portal-dark: #9A7B14; } /* gold   */
+.theme-staff   { --portal: #2B6CB0; --portal-dark: #1E4E8C; } /* blue   */
 
 /* Toolbar: portal colour flowing into gold — colourful in every portal. */
 .shell .topbar {

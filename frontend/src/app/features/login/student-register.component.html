@@ -1,0 +1,85 @@
+    <div class="wrap">
+      <div class="card">
+        <div class="badge"><mat-icon>person_add</mat-icon></div>
+        <div class="logo">MSYEP</div>
+        <div class="tag">Student Registration</div>
+
+        <mat-progress-bar *ngIf="loading()" mode="indeterminate" class="bar"></mat-progress-bar>
+
+        <!-- Success -->
+        <ng-container *ngIf="done() as res">
+          <div class="success">
+            <mat-icon class="ok">check_circle</mat-icon>
+            <p class="info">{{ res.message }}</p>
+            <div class="rows">
+              <div><span>Register No</span><b>{{ res.registerNo }}</b></div>
+              <div><span>Login ID</span><b>{{ res.loginId }}</b></div>
+            </div>
+          </div>
+          <button mat-flat-button class="full login-btn" type="button" (click)="goToLogin()">
+            <mat-icon>login</mat-icon> Proceed to OTP Login
+          </button>
+        </ng-container>
+
+        <!-- Form -->
+        <form *ngIf="!done()" (ngSubmit)="submit()">
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Full Name</mat-label>
+            <mat-icon matPrefix>person</mat-icon>
+            <input matInput name="name" [(ngModel)]="model.name" required />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Mobile Number</mat-label>
+            <mat-icon matPrefix>smartphone</mat-icon>
+            <input matInput name="phone" [(ngModel)]="model.phone" required
+                   inputmode="numeric" maxlength="10" placeholder="10-digit mobile" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Email (optional)</mat-label>
+            <mat-icon matPrefix>mail</mat-icon>
+            <input matInput type="email" name="email" [(ngModel)]="model.email" />
+          </mat-form-field>
+
+          <app-search-select label="Zone" [options]="zones()" valueKey="id" labelKey="name"
+            [emptyOption]="true" [value]="model.zoneId" (valueChange)="onZone($event)"></app-search-select>
+
+          <app-search-select label="Center (College)" [options]="centers()" valueKey="id"
+            labelKey="name" [emptyOption]="true" [disabled]="!model.zoneId"
+            [(value)]="model.centerId"></app-search-select>
+
+          <app-location-picker [(district)]="model.district" [(taluk)]="model.taluk"
+            [(gramPanchayat)]="model.gramPanchayat"></app-location-picker>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Gender</mat-label>
+            <mat-select name="gender" [(ngModel)]="model.gender">
+              <mat-option value="Male">Male</mat-option>
+              <mat-option value="Female">Female</mat-option>
+              <mat-option value="Other">Other</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Date of Birth</mat-label>
+            <input matInput type="date" name="dob" [(ngModel)]="model.dateOfBirth" />
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full">
+            <mat-label>Educational Qualification (optional)</mat-label>
+            <input matInput name="edu" [(ngModel)]="model.educationalQualification" />
+          </mat-form-field>
+
+          <p class="error" *ngIf="error()">{{ error() }}</p>
+          <button mat-flat-button class="full login-btn" type="submit" [disabled]="loading()">
+            <mat-icon>how_to_reg</mat-icon> Register
+          </button>
+          <div class="links center">
+            <button type="button" mat-button routerLink="/login">Already registered? Sign in</button>
+          </div>
+        </form>
+
+        <div class="hint foot">Students sign in with a one-time password (OTP).</div>
+      </div>
+    </div>

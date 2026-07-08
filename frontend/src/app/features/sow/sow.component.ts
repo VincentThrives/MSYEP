@@ -1,0 +1,212 @@
+import { Component, inject, signal } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+
+import { DataService } from '../../core/data.service';
+import { AuthService } from '../../core/auth.service';
+import { SearchSelectComponent } from '../../shared/search-select.component';
+import { Center, Zone } from '../../core/models';
+
+interface PersonField { key: string; label: string; question?: boolean; opinion?: boolean; }
+
+@Component({
+  selector: 'app-sow',
+  standalone: true,
+  imports: [
+    CommonModule, FormsModule, MatFormFieldModule, MatInputModule, MatSelectModule,
+    MatButtonModule, MatIconModule, MatSnackBarModule, SearchSelectComponent,
+  ],
+  templateUrl: './sow.component.html',
+  styleUrl: './sow.component.scss',
+})
+export class SowComponent {
+  private data = inject(DataService);
+  private auth = inject(AuthService);
+  private snack = inject(MatSnackBar);
+
+  /** CENTER acts on its own center; ADMIN picks Zone→Center; ZONE picks one of its own centers. */
+  readonly role = this.auth.role();
+  readonly isCenter = this.role === 'CENTER';
+  readonly isAdmin = this.role === 'SUPER_ADMIN' || this.role === 'ADMIN';
+  zones = signal<Zone[]>([]);
+  selectedZoneId = signal<string | undefined>(undefined);
+  centers = signal<Center[]>([]);
+  selectedCenterId = signal<string | undefined>(undefined);
+  /** Admin: centers of the chosen zone; Zone: its own centers (already scoped). */
+  centersForPicker(): Center[] {
+    return this.isAdmin ? this.centers().filter((c) => c.zoneId === this.selectedZoneId()) : this.centers();
+  }
+  private centerId(): string | undefined {
+    return this.isCenter ? undefined : this.selectedCenterId();
+  }
+  get ready(): boolean {
+    return this.isCenter || !!this.selectedCenterId();
+  }
+
+  readonly programs = [1, 2, 3, 4, 5, 6, 7, 8];
+  readonly programOptions = [
+    '1st Program', '2nd Program', '3rd Program', '4th Program',
+    '5th Program', '6th Program', '7th Program', '8th Program',
+  ];
+  readonly groupIdx = [1, 2, 3, 4, 5, 6, 7, 8];
+
+  readonly topFields = [
+    { key: 'inaugurationDate', label: 'Program Inauguration Date', type: 'date' },
+    { key: 'guestName', label: 'Guest Name', type: 'text' },
+    { key: 'guestPhone', label: 'Guest Phone Number', type: 'text' },
+    { key: 'guestDesignation', label: 'Guest Designation', type: 'text' },
+    { key: 'groupsDate', label: 'Groups Date', type: 'date' },
+  ];
+  readonly letterFields = [
+    { key: 'letterGuestName', label: 'Guest Name', type: 'text' },
+    { key: 'letterGuestPhone', label: 'Guest Phone Number', type: 'text' },
+    { key: 'letterGuestDesignation', label: 'Guest Designation', type: 'text' },
+  ];
+  readonly personFields: PersonField[] = [
+    { key: 'anchoring', label: 'Program Anchoring by' },
+    { key: 'welcomeSpeech', label: 'Welcome Speech by' },
+    { key: 'preambleReading', label: 'Indian Constitution — Preamble Reading by' },
+    { key: 'query1', label: 'Query 1 by', question: true },
+    { key: 'query2', label: 'Query 2 by', question: true },
+    { key: 'query3', label: 'Query 3 by', question: true },
+    { key: 'voteOfThanks', label: 'Vote of Thanks by' },
+    { key: 'honouring', label: 'Honouring by' },
+    { key: 'guestOpinionBy', label: 'Taking Guest Opinion by' },
+    { key: 'guestOpinion', label: 'Guest Opinion', opinion: true },
+  ];
+
+  view = signal<'cards' | 'form'>('cards');
+  program = signal(0);
+  saving = signal(false);
+  filledPrograms = signal<Set<number>>(new Set());
+
+  fields: Record<string, string> = {};
+  photos: Record<string, string> = {};
+
+  constructor() {
+    if (this.isCenter) {
+      this.loadStatuses();
+    } else {
+      this.data.centers().subscribe((c) => this.centers.set(c));
+      if (this.isAdmin) this.data.zones().subscribe((z) => this.zones.set(z));
+    }
+  }
+
+  onZone(id: string): void {
+    this.selectedZoneId.set(id || undefined);
+    this.selectedCenterId.set(undefined);
+    this.view.set('cards');
+  }
+
+  onCenter(id: string): void {
+    this.selectedCenterId.set(id || undefined);
+    this.view.set('cards');
+    if (id) this.loadStatuses();
+  }
+
+  private loadStatuses(): void {
+    this.data.sowList(this.centerId()).subscribe((list) =>
+      this.filledPrograms.set(new Set((list || []).map((s) => s.programIndex))));
+  }
+
+  openProgram(i: number): void {
+    this.program.set(i);
+    this.fields = {};
+    this.photos = {};
+    this.fields['programNumber'] = this.programOptions[i - 1];
+    this.view.set('cards'); // reset then load
+    this.data.sowGet(i, this.centerId()).subscribe((s) => {
+      if (s) {
+        this.fields = { ...s.fields };
+        this.photos = { ...s.photos };
+        if (!this.fields['programNumber']) this.fields['programNumber'] = this.programOptions[i - 1];
+      }
+      this.view.set('form');
+    });
+  }
+
+  back(): void {
+    this.view.set('cards');
+    this.loadStatuses();
+  }
+
+  /** Read a captured/selected image, centre-crop to a square and downscale. */
+  onPhoto(key: string, ev: Event): void {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const side = Math.min(img.width, img.height);
+        const sx = (img.width - side) / 2;
+        const sy = (img.height - side) / 2;
+        const out = 640;
+        const canvas = document.createElement('canvas');
+        canvas.width = out;
+        canvas.height = out;
+        canvas.getContext('2d')!.drawImage(img, sx, sy, side, side, 0, 0, out, out);
+        this.photos[key] = canvas.toDataURL('image/jpeg', 0.7);
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+
+  clearPhoto(key: string): void {
+    delete this.photos[key];
+  }
+
+  private payload() {
+    return { fields: this.fields, photos: this.photos };
+  }
+
+  save(): void {
+    this.saving.set(true);
+    this.data.sowSave(this.program(), this.payload(), this.centerId()).subscribe({
+      next: () => {
+        this.saving.set(false);
+        this.snack.open(`Program ${this.program()} saved`, 'OK', { duration: 2500 });
+        this.loadStatuses();
+      },
+      error: (e) => this.fail(e),
+    });
+  }
+
+  /** Save the latest values, then download the PDF (backend also emails the college). */
+  download(): void {
+    this.saving.set(true);
+    this.data.sowSave(this.program(), this.payload(), this.centerId()).subscribe({
+      next: () => {
+        this.data.sowDownload(this.program(), this.centerId()).subscribe({
+          next: (blob) => {
+            this.saving.set(false);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `SOW-Program-${this.program()}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+            this.snack.open('Downloaded — and emailed to the college mail-id (if configured).', 'OK', { duration: 4000 });
+            this.loadStatuses();
+          },
+          error: (e) => this.fail(e),
+        });
+      },
+      error: (e) => this.fail(e),
+    });
+  }
+
+  private fail(e: any): void {
+    this.saving.set(false);
+    this.snack.open(e?.error?.message || 'Could not save', 'OK', { duration: 3500 });
+  }
+}

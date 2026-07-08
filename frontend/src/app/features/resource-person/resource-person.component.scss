@@ -1,0 +1,21 @@
+    h1 { color: var(--green-deep, #0E5132); }
+    .lead { color: #607065; margin: -6px 0 16px; font-size: 14px; }
+    .panel { background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 18px; }
+    .row { display: flex; align-items: center; gap: 12px; }
+    .count { width: 280px; }
+    .hint { color: #8a9a90; font-size: 13px; }
+
+    .person { display: flex; gap: 12px; align-items: flex-start;
+      border: 1px solid #eef2f0; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+    .person-no { flex: 0 0 28px; height: 28px; border-radius: 50%; margin-top: 12px;
+      display: grid; place-items: center; font-weight: 700; color: #0E5132; background: #eef5f0; }
+    .person-fields { display: flex; gap: 12px; flex-wrap: wrap; flex: 1; }
+    .person-fields mat-form-field { flex: 1 1 200px; min-width: 170px; }
+    .person-fields .org { flex: 1 1 100%; }
+
+    .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 12px;
+      padding-top: 14px; border-top: 1px dashed #e3e9e5; }
+
+    .center-pick { display: flex; gap: 12px; flex-wrap: wrap; margin: 4px 0 14px; }
+    .center-pick app-search-select { display: block; flex: 1 1 240px; min-width: 200px; max-width: 340px; }
+    .hint.pad { padding: 8px 0; }

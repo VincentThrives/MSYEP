@@ -3,8 +3,19 @@
         <div class="badge"><mat-icon>school</mat-icon></div>
         <div class="logo">MSYEP</div>
         <div class="tag">Yukta Kaushalya Tarabethi</div>
+
+        <mat-button-toggle-group class="modes" [value]="mode()" (change)="setMode($event.value)">
+          <mat-button-toggle value="staff"><mat-icon>badge</mat-icon> Staff</mat-button-toggle>
+          <mat-button-toggle value="zone"><mat-icon>public</mat-icon> Zone</mat-button-toggle>
+          <mat-button-toggle value="center"><mat-icon>school</mat-icon> Center</mat-button-toggle>
+          <mat-button-toggle value="student"><mat-icon>person</mat-icon> Student</mat-button-toggle>
+        </mat-button-toggle-group>
+
         <mat-progress-bar *ngIf="loading()" mode="indeterminate" class="bar"></mat-progress-bar>
-        <form (ngSubmit)="submit()">
+
+        <!-- Staff / Zone / Center: email + password -->
+        <form *ngIf="isPasswordMode()" (ngSubmit)="submit()">
+          <div class="mode-hint">{{ modeHint() }}</div>
           <mat-form-field appearance="outline" class="full">
             <mat-label>Email</mat-label>
             <mat-icon matPrefix>mail</mat-icon>
@@ -20,7 +31,44 @@
             <mat-icon>login</mat-icon> Sign in
           </button>
         </form>
-        <div class="hint">Super Admin · Admin · Zone · Center · Finance · Student</div>
+
+        <!-- Student: OTP only, no password -->
+        <ng-container *ngIf="mode() === 'student'">
+          <form *ngIf="!otpSent()" (ngSubmit)="sendOtp()">
+            <mat-form-field appearance="outline" class="full">
+              <mat-label>User ID / Mobile</mat-label>
+              <mat-icon matPrefix>person</mat-icon>
+              <input matInput name="identifier" [(ngModel)]="identifier" required
+                     autocomplete="username" placeholder="Registered mobile or User ID" />
+            </mat-form-field>
+            <p class="error" *ngIf="error()">{{ error() }}</p>
+            <button mat-flat-button class="full login-btn" type="submit" [disabled]="loading()">
+              <mat-icon>sms</mat-icon> Send OTP
+            </button>
+            <div class="hint">Students sign in with a one-time password sent to their registered contact.</div>
+            <div class="reg-cta">New student? <a routerLink="/register">Create an account</a></div>
+          </form>
+
+          <form *ngIf="otpSent()" (ngSubmit)="verifyOtp()">
+            <p class="info" *ngIf="info()">{{ info() }}</p>
+            <p class="devotp" *ngIf="devOtp()">Testing OTP: <b>{{ devOtp() }}</b></p>
+            <mat-form-field appearance="outline" class="full">
+              <mat-label>Enter OTP</mat-label>
+              <mat-icon matPrefix>pin</mat-icon>
+              <input matInput name="otp" [(ngModel)]="otp" required inputmode="numeric"
+                     maxlength="6" autocomplete="one-time-code" placeholder="6-digit code" />
+            </mat-form-field>
+            <p class="error" *ngIf="error()">{{ error() }}</p>
+            <button mat-flat-button class="full login-btn" type="submit" [disabled]="loading()">
+              <mat-icon>login</mat-icon> Verify & Sign in
+            </button>
+            <div class="links">
+              <button type="button" mat-button (click)="sendOtp()" [disabled]="loading()">Resend OTP</button>
+              <button type="button" mat-button (click)="resetOtp()">Change number</button>
+            </div>
+          </form>
+        </ng-container>
+
+        <div class="hint foot">Super Admin · Admin · Zone · Center · Finance · Student</div>
       </div>
     </div>
-  

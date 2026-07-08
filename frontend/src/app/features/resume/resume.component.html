@@ -1,0 +1,41 @@
+    <div class="head"><h1>My Resume / CV</h1></div>
+    <p class="lead">Generate a formal MSYEP resume from your profile. A one-time fee of
+      <b>₹{{ price }}</b> unlocks it — after paying you can re-download any time.</p>
+
+    <mat-progress-bar *ngIf="busy()" mode="indeterminate" class="bar"></mat-progress-bar>
+
+    <div class="card" *ngIf="status() as st">
+      <!-- Incomplete: ask for the missing fields -->
+      <ng-container *ngIf="!st.complete">
+        <div class="warn">
+          <mat-icon>error_outline</mat-icon>
+          <div>
+            <div class="warn-title">Complete your profile to generate the CV</div>
+            <div class="warn-sub">These fields are still empty:</div>
+          </div>
+        </div>
+        <div class="missing">
+          <button class="miss" *ngFor="let m of st.missing" mat-stroked-button (click)="goToField(m.tab)">
+            <mat-icon>edit</mat-icon> {{ m.label }}
+          </button>
+        </div>
+        <p class="hint">Tap a field to jump to that section of your profile, fill it, then come back here.</p>
+      </ng-container>
+
+      <!-- Complete -->
+      <ng-container *ngIf="st.complete">
+        <div class="ready">
+          <mat-icon class="ok">check_circle</mat-icon>
+          <div>
+            <div class="ready-title">Your profile is complete{{ st.paid ? ' and paid' : '' }}.</div>
+            <div class="ready-sub">
+              {{ st.paid ? 'Download your resume any time.' : 'Pay ₹' + price + ' to generate and download your resume.' }}
+            </div>
+          </div>
+        </div>
+        <button mat-flat-button color="primary" class="cta" [disabled]="busy()" (click)="payAndDownload()">
+          <mat-icon>{{ st.paid ? 'download' : 'qr_code_2' }}</mat-icon>
+          {{ st.paid ? 'Download CV' : 'Pay ₹' + price + ' & Download' }}
+        </button>
+      </ng-container>
+    </div>

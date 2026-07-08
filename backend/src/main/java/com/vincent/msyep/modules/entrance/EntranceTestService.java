@@ -81,6 +81,11 @@ public class EntranceTestService {
         Student student = students.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found: " + studentId));
 
+        // One attempt only — block if this student has already submitted the test.
+        if (hasTaken(studentId)) {
+            throw new IllegalArgumentException("You have already taken the entrance test. Only one attempt is allowed.");
+        }
+
         List<QuestionBank> all = bank.findAll();
         if (all.size() < QUESTIONS) {
             throw new IllegalStateException("Question bank not ready");
@@ -121,22 +126,72 @@ public class EntranceTestService {
         return new StartResponse(attempt.getId(), DURATION_MIN, attempt.getStartedAt().toString(), views);
     }
 
-    /** Build 4 shuffled options: correct + 3 same-category distractors (fallback any). */
+    /** Common question words that carry no topical signal. */
+    private static final Set<String> STOP = Set.of(
+            "which", "what", "who", "whom", "whose", "where", "when", "why", "how",
+            "is", "are", "was", "were", "do", "does", "did", "has", "have", "had",
+            "the", "a", "an", "of", "to", "in", "on", "at", "for", "and", "or", "by",
+            "with", "from", "this", "that", "these", "those", "it", "its", "as", "be",
+            "been", "being", "will", "would", "can", "could", "should", "name", "choose",
+            "fill", "blank", "correct", "following", "called", "known", "word", "term",
+            "you", "your", "one", "many", "give", "state", "here", "into");
+
+    /** Meaningful (topical) words from a question. */
+    private Set<String> keywords(String question) {
+        if (question == null) return Set.of();
+        Set<String> ks = new LinkedHashSet<>();
+        for (String t : question.toLowerCase().replaceAll("[^a-z0-9 ]", " ").split("\\s+")) {
+            if (t.length() >= 4 && !STOP.contains(t)) ks.add(t);
+        }
+        return ks;
+    }
+
+    private static int overlap(Set<String> a, Set<String> b) {
+        int n = 0;
+        for (String s : a) if (b.contains(s)) n++;
+        return n;
+    }
+
+    /**
+     * Build 4 shuffled options: the correct answer + 3 distractors.
+     * Distractors are drawn first from questions that share keywords with this one
+     * (so a "festival" question yields other festivals), then any same-category
+     * answer, then any answer as a last resort.
+     */
     private List<String> buildOptions(QuestionBank q, Map<String, List<QuestionBank>> byCat,
                                       List<QuestionBank> all) {
         LinkedHashSet<String> opts = new LinkedHashSet<>();
         opts.add(q.getAnswer());
 
-        List<String> sameCat = byCat.getOrDefault(q.getCategory(), List.of()).stream()
-                .map(QuestionBank::getAnswer)
-                .filter(a -> !a.equalsIgnoreCase(q.getAnswer()))
-                .distinct().collect(Collectors.toList());
-        Collections.shuffle(sameCat, rnd);
-        for (String d : sameCat) { if (opts.size() >= 4) break; opts.add(d); }
+        Set<String> myKeys = keywords(q.getQuestion());
+        List<QuestionBank> sameCat = byCat.getOrDefault(q.getCategory() == null ? "" : q.getCategory(), List.of());
 
+        // 1) Relevance-ranked distractors: same category + shares >=1 topical keyword.
+        List<Map.Entry<String, Integer>> scored = sameCat.stream()
+                .filter(o -> o != q && o.getAnswer() != null && !o.getAnswer().equalsIgnoreCase(q.getAnswer()))
+                .map(o -> Map.entry(o.getAnswer(), overlap(myKeys, keywords(o.getQuestion()))))
+                .filter(e -> e.getValue() > 0)
+                .collect(Collectors.toList());
+        Collections.shuffle(scored, rnd);                                   // variety among equal scores
+        scored.sort((x, y) -> Integer.compare(y.getValue(), x.getValue())); // stable: keeps shuffle order per tier
+        for (Map.Entry<String, Integer> e : scored) {
+            if (opts.size() >= 4) break;
+            opts.add(e.getKey());
+        }
+
+        // 2) Fallback: any same-category answer.
+        if (opts.size() < 4) {
+            List<String> catAny = sameCat.stream().map(QuestionBank::getAnswer)
+                    .filter(a -> a != null && opts.stream().noneMatch(o -> o.equalsIgnoreCase(a)))
+                    .distinct().collect(Collectors.toList());
+            Collections.shuffle(catAny, rnd);
+            for (String d : catAny) { if (opts.size() >= 4) break; opts.add(d); }
+        }
+
+        // 3) Last resort: any answer at all.
         if (opts.size() < 4) {
             List<String> any = all.stream().map(QuestionBank::getAnswer)
-                    .filter(a -> opts.stream().noneMatch(o -> o.equalsIgnoreCase(a)))
+                    .filter(a -> a != null && opts.stream().noneMatch(o -> o.equalsIgnoreCase(a)))
                     .distinct().collect(Collectors.toList());
             Collections.shuffle(any, rnd);
             for (String d : any) { if (opts.size() >= 4) break; opts.add(d); }
@@ -173,11 +228,49 @@ public class EntranceTestService {
         attempt.setStatus("SUBMITTED");
         attempt.setSubmittedAt(Instant.now());
         attempts.save(attempt);
+        sendResultToWhatsApp(attempt);
         return toResult(attempt);
+    }
+
+    /**
+     * Deliver the result sheet to the student's WhatsApp number.
+     * A WhatsApp Business/Cloud API (or Twilio/Gupshup) gateway isn't wired yet — this records
+     * the intent so it's ready to send the moment credentials are configured.
+     */
+    private void sendResultToWhatsApp(EntranceAttempt attempt) {
+        try {
+            String phone = students.findById(attempt.getStudentId())
+                    .map(Student::getPhone).orElse(null);
+            String outcome = attempt.isPassed() ? "PASS" : "FAIL";
+            if (org.springframework.util.StringUtils.hasText(phone)) {
+                log.info("Entrance result for {} ({}/{} - {}) queued for WhatsApp to {} — gateway pending.",
+                        attempt.getStudentName(), attempt.getScore(), attempt.getTotal(), outcome, phone);
+            } else {
+                log.info("Entrance result for {} not sent — no WhatsApp/mobile number on file.",
+                        attempt.getStudentName());
+            }
+        } catch (Exception e) {
+            log.warn("WhatsApp result hook failed: {}", e.getMessage());
+        }
     }
 
     public List<EntranceAttempt> attemptsFor(String studentId) {
         return attempts.findByStudentIdOrderByStartedAtDesc(studentId);
+    }
+
+    /** True once the student has a SUBMITTED attempt. */
+    public boolean hasTaken(String studentId) {
+        return attempts.findByStudentIdOrderByStartedAtDesc(studentId).stream()
+                .anyMatch(a -> "SUBMITTED".equals(a.getStatus()));
+    }
+
+    /** The student's completed result (latest submitted attempt), or null if not yet taken. */
+    public ResultResponse latestResult(String studentId) {
+        return attempts.findByStudentIdOrderByStartedAtDesc(studentId).stream()
+                .filter(a -> "SUBMITTED".equals(a.getStatus()))
+                .findFirst()
+                .map(this::toResult)
+                .orElse(null);
     }
 
     /** Result PDF with the student's selfie, score, and pass/fail. */

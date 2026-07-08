@@ -5,65 +5,127 @@
       </button>
     </div>
 
+    <!-- CREATE / EDIT WIZARD -->
     <div class="form-panel" *ngIf="editing()">
-      <h3>{{ form.id ? 'Edit' : 'Add' }} Staff</h3>
-      <div class="row">
-        <mat-form-field appearance="outline"><mat-label>Name</mat-label>
-          <input matInput [(ngModel)]="form.name" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Designation</mat-label>
-          <input matInput [(ngModel)]="form.designation" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Phone</mat-label>
-          <input matInput [(ngModel)]="form.phone" /></mat-form-field>
-        <mat-form-field appearance="outline"><mat-label>Email</mat-label>
-          <input matInput [(ngModel)]="form.email" /></mat-form-field>
+      <div class="overall" [class.done]="overall() === 100">
+        <div class="overall-top"><span>Overall completion</span><b>{{ overall() }}%</b></div>
+        <div class="wz-bar"><div class="wz-fill" [style.width.%]="overall()"></div></div>
       </div>
-      <div class="row">
-        <app-search-select label="Zone (University)" [options]="zones()" valueKey="id"
-          labelKey="name" [emptyOption]="true" [(value)]="form.zoneId"></app-search-select>
-        <app-search-select label="Center (College)" [options]="centers()" valueKey="id"
-          labelKey="name" [emptyOption]="true" [(value)]="form.centerId"></app-search-select>
-      </div>
-      <div class="row">
-        <app-location-picker
-          [(district)]="form.district" [(taluk)]="form.taluk"
-          [(gramPanchayat)]="form.gramPanchayat"></app-location-picker>
-      </div>
-      <div class="form-actions">
+
+      <mat-tab-group [selectedIndex]="tabIndex()" (selectedIndexChange)="tabIndex.set($event)">
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <span class="wz-tl" [class.done]="isComplete('details')">Staff Details
+              <mat-icon *ngIf="isComplete('details')">check_circle</mat-icon>
+              <span *ngIf="!isComplete('details')" class="pct">{{ progress('details') }}%</span>
+            </span>
+          </ng-template>
+          <div class="tab">
+            <div class="sec-progress" [class.done]="isComplete('details')">
+              <div class="wz-bar"><div class="wz-fill" [style.width.%]="progress('details')"></div></div>
+              <span class="lbl">{{ progress('details') }}% complete</span>
+            </div>
+            <div class="row">
+              <mat-form-field appearance="outline"><mat-label>Name</mat-label>
+                <input matInput [(ngModel)]="form.name" /></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Designation</mat-label>
+                <input matInput [(ngModel)]="form.designation" /></mat-form-field>
+            </div>
+            <div class="row">
+              <mat-form-field appearance="outline"><mat-label>Phone</mat-label>
+                <input matInput [(ngModel)]="form.phone" /></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Email</mat-label>
+                <input matInput [(ngModel)]="form.email" /></mat-form-field>
+            </div>
+          </div>
+        </mat-tab>
+
+        <mat-tab>
+          <ng-template mat-tab-label>
+            <span class="wz-tl" [class.done]="isComplete('assignment')">Assignment &amp; Location
+              <mat-icon *ngIf="isComplete('assignment')">check_circle</mat-icon>
+              <span *ngIf="!isComplete('assignment')" class="pct">{{ progress('assignment') }}%</span>
+            </span>
+          </ng-template>
+          <div class="tab">
+            <div class="sec-progress" [class.done]="isComplete('assignment')">
+              <div class="wz-bar"><div class="wz-fill" [style.width.%]="progress('assignment')"></div></div>
+              <span class="lbl">{{ progress('assignment') }}% complete</span>
+            </div>
+            <div class="row">
+              <app-search-select label="Zone (University)" [options]="zones()" valueKey="id"
+                labelKey="name" [emptyOption]="true" [(value)]="form.zoneId"></app-search-select>
+              <app-search-select label="Center (College)" [options]="centers()" valueKey="id"
+                labelKey="name" [emptyOption]="true" [(value)]="form.centerId"></app-search-select>
+            </div>
+            <div class="row">
+              <app-location-picker
+                [(district)]="form.district" [(taluk)]="form.taluk"
+                [(gramPanchayat)]="form.gramPanchayat"></app-location-picker>
+            </div>
+          </div>
+        </mat-tab>
+      </mat-tab-group>
+
+      <div class="wizard-actions">
         <button mat-button (click)="editing.set(false)">Cancel</button>
-        <button mat-flat-button color="primary" (click)="save()">Save</button>
+        <span class="spacer"></span>
+        <button mat-stroked-button *ngIf="tabIndex() > 0" (click)="goTo(tabIndex() - 1)">
+          <mat-icon>arrow_back</mat-icon> Back</button>
+        <button mat-flat-button color="primary" *ngIf="!isLastTab" (click)="goTo(tabIndex() + 1)">
+          Next <mat-icon>arrow_forward</mat-icon></button>
+        <button mat-flat-button color="primary" *ngIf="isLastTab" (click)="save()">
+          <mat-icon>check</mat-icon> {{ form.id ? 'Save' : 'Submit' }}</button>
       </div>
     </div>
 
-    <table mat-table [dataSource]="staff()" class="mat-elevation-z1 full">
-      <ng-container matColumnDef="name">
-        <th mat-header-cell *matHeaderCellDef>Name</th>
-        <td mat-cell *matCellDef="let s">{{ s.name }}</td>
-      </ng-container>
-      <ng-container matColumnDef="designation">
-        <th mat-header-cell *matHeaderCellDef>Designation</th>
-        <td mat-cell *matCellDef="let s">{{ s.designation }}</td>
-      </ng-container>
-      <ng-container matColumnDef="phone">
-        <th mat-header-cell *matHeaderCellDef>Phone</th>
-        <td mat-cell *matCellDef="let s">{{ s.phone }}</td>
-      </ng-container>
-      <ng-container matColumnDef="zone">
-        <th mat-header-cell *matHeaderCellDef>Zone</th>
-        <td mat-cell *matCellDef="let s">{{ zoneName(s.zoneId) }}</td>
-      </ng-container>
-      <ng-container matColumnDef="district">
-        <th mat-header-cell *matHeaderCellDef>District</th>
-        <td mat-cell *matCellDef="let s">{{ s.district }}</td>
-      </ng-container>
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef>Actions</th>
-        <td mat-cell *matCellDef="let s">
-          <button mat-icon-button (click)="edit(s)"><mat-icon>edit</mat-icon></button>
-          <button mat-icon-button color="warn" (click)="remove(s)"><mat-icon>delete</mat-icon></button>
-        </td>
-      </ng-container>
-      <tr mat-header-row *matHeaderRowDef="cols"></tr>
-      <tr mat-row *matRowDef="let row; columns: cols"></tr>
-    </table>
-    <p *ngIf="!staff().length" class="empty">No staff yet.</p>
-  
+    <!-- VIEW LIST (hidden while creating/editing) -->
+    <ng-container *ngIf="!editing()">
+      <div class="list-filters">
+        <app-search-select label="District" [options]="districtOptions()" [emptyOption]="true"
+          [value]="fDistrict()" (valueChange)="fDistrict.set($event || ''); fTaluk.set(''); fGp.set('')"></app-search-select>
+        <app-search-select label="Taluk" [options]="talukOptions()" [emptyOption]="true"
+          [value]="fTaluk()" (valueChange)="fTaluk.set($event || ''); fGp.set('')"></app-search-select>
+        <app-search-select label="Gram Panchayat" [options]="gpOptions()" [emptyOption]="true"
+          [value]="fGp()" (valueChange)="fGp.set($event || '')"></app-search-select>
+        <mat-form-field appearance="outline">
+          <mat-label>Search name / phone</mat-label>
+          <mat-icon matPrefix>search</mat-icon>
+          <input matInput [ngModel]="fSearch()" (ngModelChange)="fSearch.set($event)" />
+        </mat-form-field>
+        <button mat-stroked-button class="clear" (click)="clearFilters()"><mat-icon>clear</mat-icon> Clear</button>
+      </div>
+
+      <table mat-table [dataSource]="filtered()" class="mat-elevation-z1 full">
+        <ng-container matColumnDef="name">
+          <th mat-header-cell *matHeaderCellDef>Name</th>
+          <td mat-cell *matCellDef="let s">{{ s.name }}</td>
+        </ng-container>
+        <ng-container matColumnDef="designation">
+          <th mat-header-cell *matHeaderCellDef>Designation</th>
+          <td mat-cell *matCellDef="let s">{{ s.designation }}</td>
+        </ng-container>
+        <ng-container matColumnDef="phone">
+          <th mat-header-cell *matHeaderCellDef>Phone</th>
+          <td mat-cell *matCellDef="let s">{{ s.phone }}</td>
+        </ng-container>
+        <ng-container matColumnDef="zone">
+          <th mat-header-cell *matHeaderCellDef>Zone</th>
+          <td mat-cell *matCellDef="let s">{{ zoneName(s.zoneId) }}</td>
+        </ng-container>
+        <ng-container matColumnDef="district">
+          <th mat-header-cell *matHeaderCellDef>District</th>
+          <td mat-cell *matCellDef="let s">{{ s.district }}</td>
+        </ng-container>
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef>Actions</th>
+          <td mat-cell *matCellDef="let s">
+            <button mat-icon-button (click)="edit(s)"><mat-icon>edit</mat-icon></button>
+            <button mat-icon-button color="warn" (click)="remove(s)"><mat-icon>delete</mat-icon></button>
+          </td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="cols"></tr>
+        <tr mat-row *matRowDef="let row; columns: cols"></tr>
+      </table>
+      <p *ngIf="!filtered().length" class="empty">No staff match the current filters.</p>
+    </ng-container>

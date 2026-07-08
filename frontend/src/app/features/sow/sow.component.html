@@ -1,0 +1,115 @@
+    <div class="head">
+      <h1>KP-MSYEP SOW</h1>
+      <button *ngIf="view() === 'form'" mat-stroked-button (click)="back()">
+        <mat-icon>arrow_back</mat-icon> All Programs
+      </button>
+    </div>
+
+    <!-- Admin: Zone → Center. Zone login: only Center. -->
+    <div class="center-pick" *ngIf="!isCenter">
+      <app-search-select *ngIf="isAdmin" label="Select Zone (University)" [options]="zones()" valueKey="id"
+        labelKey="name" [value]="selectedZoneId()" (valueChange)="onZone($event)"></app-search-select>
+      <app-search-select label="Select Center (College)" [options]="centersForPicker()" valueKey="id"
+        labelKey="name" [disabled]="isAdmin && !selectedZoneId()"
+        [value]="selectedCenterId()" (valueChange)="onCenter($event)"></app-search-select>
+    </div>
+    <p class="hint pad" *ngIf="!ready">
+      {{ isAdmin ? 'Select a zone and center to view its 8 SOW programs.' : 'Select a center to view and fill its 8 SOW programs.' }}
+    </p>
+
+    <!-- 8 PROGRAM CARDS -->
+    <ng-container *ngIf="ready && view() === 'cards'">
+      <p class="lead">Select a program to fill its Statement of Work. Each saved program can be
+        downloaded as a PDF, which is also emailed to your college mail-id.</p>
+      <div class="cards">
+        <button class="card" *ngFor="let i of programs" (click)="openProgram(i)"
+          [class.done]="filledPrograms().has(i)">
+          <mat-icon class="tick" *ngIf="filledPrograms().has(i)">check_circle</mat-icon>
+          <div class="num">{{ i }}</div>
+          <div class="label">Program {{ i }}</div>
+          <div class="status">{{ filledPrograms().has(i) ? 'Saved · tap to edit' : 'Tap to fill' }}</div>
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- SOW FORM -->
+    <div class="form-panel" *ngIf="view() === 'form'">
+      <h2 class="prog-title">Program {{ program() }} — Statement of Work</h2>
+
+      <div class="row">
+        <mat-form-field appearance="outline">
+          <mat-label>Program</mat-label>
+          <mat-select [(ngModel)]="fields['programNumber']">
+            <mat-option *ngFor="let o of programOptions" [value]="o">{{ o }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+      </div>
+
+      <h3 class="sec">Inauguration & Guest</h3>
+      <div class="row">
+        <mat-form-field appearance="outline" *ngFor="let f of topFields">
+          <mat-label>{{ f.label }}</mat-label>
+          <input matInput [type]="f.type" [(ngModel)]="fields[f.key]" />
+        </mat-form-field>
+      </div>
+
+      <h3 class="sec">08 Groups</h3>
+      <div class="row groups">
+        <mat-form-field appearance="outline" *ngFor="let g of groupIdx">
+          <mat-label>Group {{ g }} Name</mat-label>
+          <input matInput [(ngModel)]="fields['group' + g]" />
+        </mat-form-field>
+      </div>
+
+      <h3 class="sec">Program Letter</h3>
+      <div class="photo-block">
+        <div class="ph-label">Program Letter Photo</div>
+        <ng-container [ngTemplateOutlet]="photo" [ngTemplateOutletContext]="{ key: 'programLetterPhoto' }"></ng-container>
+      </div>
+      <div class="row">
+        <mat-form-field appearance="outline" *ngFor="let f of letterFields">
+          <mat-label>{{ f.label }}</mat-label>
+          <input matInput [type]="f.type" [(ngModel)]="fields[f.key]" />
+        </mat-form-field>
+      </div>
+
+      <h3 class="sec">Program Roles (name + photo)</h3>
+      <div class="person" *ngFor="let p of personFields">
+        <div class="person-fields">
+          <mat-form-field appearance="outline" class="grow">
+            <mat-label>{{ p.opinion ? p.label : p.label }}</mat-label>
+            <input matInput [(ngModel)]="fields[p.key]"
+              [placeholder]="p.opinion ? 'Opinion / remarks' : 'Name'" />
+          </mat-form-field>
+          <mat-form-field appearance="outline" class="grow" *ngIf="p.question">
+            <mat-label>Question</mat-label>
+            <input matInput [(ngModel)]="fields[p.key + 'Question']" />
+          </mat-form-field>
+        </div>
+        <ng-container [ngTemplateOutlet]="photo" [ngTemplateOutletContext]="{ key: p.key }"></ng-container>
+      </div>
+
+      <div class="actions">
+        <button mat-stroked-button [disabled]="saving()" (click)="save()">
+          <mat-icon>save</mat-icon> Submit
+        </button>
+        <button mat-flat-button color="primary" [disabled]="saving()" (click)="download()">
+          <mat-icon>download</mat-icon> Download &amp; Email
+        </button>
+      </div>
+    </div>
+
+    <!-- Reusable photo capture (opens camera on mobile, auto centre-crops to square) -->
+    <ng-template #photo let-key="key">
+      <div class="photo">
+        <img *ngIf="photos[key]" [src]="photos[key]" alt="photo" />
+        <div class="ph-actions">
+          <button mat-stroked-button type="button" (click)="picker.click()">
+            <mat-icon>photo_camera</mat-icon> {{ photos[key] ? 'Retake' : 'Photo' }}
+          </button>
+          <button mat-icon-button *ngIf="photos[key]" (click)="clearPhoto(key)"><mat-icon>close</mat-icon></button>
+          <input #picker type="file" hidden accept="image/*" capture="environment"
+            (change)="onPhoto(key, $event)" />
+        </div>
+      </div>
+    </ng-template>

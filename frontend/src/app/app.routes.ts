@@ -8,6 +8,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/login/login.component').then((m) => m.LoginComponent),
   },
   {
+    path: 'register',
+    loadComponent: () =>
+      import('./features/login/student-register.component').then((m) => m.StudentRegisterComponent),
+  },
+  {
     path: 'app',
     canActivate: [authGuard],
     loadComponent: () => import('./layout/shell.component').then((m) => m.ShellComponent),
@@ -26,7 +31,7 @@ export const routes: Routes = [
       },
       {
         path: 'centers',
-        canActivate: [roleGuard('ADMIN', 'ZONE')],
+        canActivate: [roleGuard('ADMIN', 'ZONE', 'CENTER')],
         loadComponent: () =>
           import('./features/centers/center-list.component').then((m) => m.CenterListComponent),
       },
@@ -46,8 +51,15 @@ export const routes: Routes = [
           import('./features/students/download-documents.component').then((m) => m.DownloadDocumentsComponent),
       },
       {
+        path: 'fund-approval',
+        canActivate: [roleGuard('ADMIN', 'ZONE')],
+        data: { title: 'Fund Approval' },
+        loadComponent: () =>
+          import('./features/placeholder/placeholder.component').then((m) => m.PlaceholderComponent),
+      },
+      {
         path: 'finance',
-        canActivate: [roleGuard('ADMIN', 'FINANCE', 'ZONE', 'CENTER')],
+        canActivate: [roleGuard('ADMIN', 'FINANCE')],
         loadComponent: () =>
           import('./features/finance/finance-table.component').then((m) => m.FinanceTableComponent),
       },
@@ -64,6 +76,12 @@ export const routes: Routes = [
           import('./features/staff/staff-list.component').then((m) => m.StaffListComponent),
       },
       {
+        path: 'location',
+        canActivate: [roleGuard('ADMIN')],
+        loadComponent: () =>
+          import('./features/location/location-management.component').then((m) => m.LocationManagementComponent),
+      },
+      {
         path: 'entrance-test',
         loadComponent: () =>
           import('./features/entrance/entrance-test.component').then((m) => m.EntranceTestComponent),
@@ -76,9 +94,21 @@ export const routes: Routes = [
       },
       {
         path: 'sow',
-        data: { title: 'KPMSYEP SOW (Statement of Work)' },
+        canActivate: [roleGuard('ADMIN', 'ZONE', 'CENTER')],
         loadComponent: () =>
-          import('./features/placeholder/placeholder.component').then((m) => m.PlaceholderComponent),
+          import('./features/sow/sow.component').then((m) => m.SowComponent),
+      },
+      {
+        path: 'resume',
+        canActivate: [roleGuard('STUDENT', 'ADMIN')],
+        loadComponent: () =>
+          import('./features/resume/resume.component').then((m) => m.ResumeComponent),
+      },
+      {
+        path: 'resource-persons',
+        canActivate: [roleGuard('ADMIN', 'ZONE', 'CENTER')],
+        loadComponent: () =>
+          import('./features/resource-person/resource-person.component').then((m) => m.ResourcePersonComponent),
       },
       {
         path: 'vbsow',

@@ -29,3 +29,34 @@
 .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 .full { width: 100%; margin-top: 12px; }
 .empty { color: #999; margin-top: 16px; }
+.reg-actions { display: flex; justify-content: flex-end; margin-top: 10px; }
+
+/* ---- Progress bars ---- */
+.bar { height: 8px; background: #e9eef0; border-radius: 6px; overflow: hidden; flex: 1; }
+.bar .fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg,#1E7A46,#2fa15e);
+  transition: width .35s ease; }
+
+.overall { margin: 4px 0 12px; }
+.overall-top { display: flex; justify-content: space-between; font-size: 13px; color: #4b5b52; margin-bottom: 5px; }
+.overall-top b { color: #0E5132; }
+.overall.done .bar .fill { background: linear-gradient(90deg,#12b358,#2fd07a); }
+
+/* Per-section progress strip inside a tab */
+.sec-progress { display: flex; align-items: center; gap: 10px; margin: 4px 0 14px; }
+.sec-progress .lbl { font-size: 12px; color: #6b7d72; min-width: 92px; text-align: right; }
+.sec-progress.done .fill { background: linear-gradient(90deg,#12b358,#2fd07a); }
+.sec-progress.done .lbl { color: #147a3d; font-weight: 700; }
+
+/* A fully-filled section = light-green card */
+.tab { padding: 18px 4px 4px; border-radius: 12px; transition: background .3s ease; }
+.tab.complete { background: #eafaf0; box-shadow: inset 0 0 0 2px #bfe9cf; padding: 18px 14px 8px; }
+
+/* Tab label with % badge / green tick */
+.tl { display: inline-flex; align-items: center; gap: 6px; }
+.tl mat-icon { font-size: 18px; height: 18px; width: 18px; color: #12b358; }
+.tl.done { color: #12b358; font-weight: 700; }
+.tl .pct { font-size: 11px; font-weight: 700; color: #185FA5; background: #eaf2fb;
+  border-radius: 10px; padding: 1px 7px; }
+
+.tab-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 18px;
+  padding-top: 12px; border-top: 1px dashed #e3e9e5; }

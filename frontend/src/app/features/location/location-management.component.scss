@@ -1,0 +1,18 @@
+    h1 { color: var(--green-deep, #0E5132); }
+    .lead { color: #607065; margin: -6px 0 14px; font-size: 14px; }
+    .lead b { color: #0E5132; }
+    .panel { background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 18px; }
+    .tab { padding: 18px 4px 4px; }
+    .sec { color: #0E5132; margin: 6px 0 14px; font-weight: 700; }
+    .sec span { color: #9aa79f; font-weight: 400; font-size: 14px; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 6px; }
+    .row mat-form-field, .row app-search-select { flex: 1 1 220px; min-width: 180px; }
+    .existing { color: #4b5b52; margin: 20px 0 8px; font-size: 14px; }
+    .loc-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+    .loc-item { display: flex; align-items: center; gap: 4px;
+      background: #f7faf8; border: 1px solid #e2ece6; border-radius: 10px; padding: 2px 4px 2px 12px; }
+    .loc-item .loc-name { flex: 1; color: #24352b; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .loc-item .edit-in { flex: 1; min-width: 0; font-size: 14px; padding: 8px 10px;
+      border: 1px solid #1E7A46; border-radius: 8px; outline: none; }
+    .loc-item button { flex: 0 0 auto; }
+    .muted { color: #9aa79f; font-size: 13px; }

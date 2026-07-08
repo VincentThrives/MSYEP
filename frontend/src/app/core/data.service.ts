@@ -70,6 +70,32 @@ export class DataService {
   saveGramPanchayat = (gp: GramPanchayat) => this.api.post<GramPanchayat>('/finance/gram-panchayats', gp);
   deleteGramPanchayat = (id: string) => this.api.delete<void>(`/finance/gram-panchayats/${id}`);
 
+  // Student CV / Resume (₹90)
+  cvStatus = () => this.api.get<any>('/cv/status');
+  cvOrder = () => this.api.post<any>('/cv/order', {});
+  cvVerify = (body: { orderId: string; paymentId: string; signature: string }) =>
+    this.api.post<boolean>('/cv/verify', body);
+  cvDownload = () => this.api.blob('/cv/download');
+
+  /** Append ?centerId= when an admin/zone acts on a specific center (blank for a center's own). */
+  private cq = (centerId?: string) => (centerId ? `?centerId=${encodeURIComponent(centerId)}` : '');
+
+  // KP-MSYEP SOW
+  sowList = (centerId?: string) => this.api.get<any[]>('/sow/list', { centerId });
+  sowGet = (programIndex: number, centerId?: string) =>
+    this.api.get<any>(`/sow/${programIndex}`, { centerId });
+  sowSave = (programIndex: number, body: { fields: Record<string, string>; photos: Record<string, string> }, centerId?: string) =>
+    this.api.post<any>(`/sow/${programIndex}${this.cq(centerId)}`, body);
+  sowDownload = (programIndex: number, centerId?: string) =>
+    this.api.blobPost(`/sow/${programIndex}/download${this.cq(centerId)}`, {});
+
+  // Resource persons (center)
+  resourcePersonsGet = (centerId?: string) => this.api.get<any>('/resource-persons', { centerId });
+  resourcePersonsSave = (body: { countRequired: number; persons: any[] }, centerId?: string) =>
+    this.api.post<any>(`/resource-persons${this.cq(centerId)}`, body);
+  resourcePersonsLetter = (centerId?: string) =>
+    this.api.blobPost(`/resource-persons/letter${this.cq(centerId)}`, {});
+
   // Staff
   staff = () => this.api.get<Staff[]>('/staff');
   createStaff = (s: Staff) => this.api.post<Staff>('/staff', s);
@@ -89,6 +115,9 @@ export class DataService {
     this.api.blob(`/entrance-test/${attemptId}/result-pdf`);
   entranceAttempts = (studentId: string) =>
     this.api.get<any[]>('/entrance-test/attempts', { studentId });
+  /** The student's completed result, or null if not taken yet. */
+  entranceResult = (studentId: string) =>
+    this.api.get<EntranceResult | null>('/entrance-test/result', { studentId });
 
   // Users
   users = () => this.api.get<any[]>('/users');

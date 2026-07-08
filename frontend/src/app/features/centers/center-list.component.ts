@@ -1,4 +1,6 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -12,6 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipInputEvent, MatChipsModule } from '@angular/material/chips';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { forkJoin, of, Observable } from 'rxjs';
 
 import { DataService } from '../../core/data.service';
@@ -28,7 +31,7 @@ import {
   imports: [
     CommonModule, FormsModule, MatTableModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule, MatTooltipModule,
-    MatTabsModule, MatChipsModule, MatCheckboxModule, SearchSelectComponent,
+    MatTabsModule, MatChipsModule, MatCheckboxModule, MatAutocompleteModule, SearchSelectComponent,
   ],
   templateUrl: './center-list.component.html',
   styleUrl: './center-list.component.scss',
@@ -37,6 +40,8 @@ export class CenterListComponent {
   private data = inject(DataService);
   private location = inject(LocationService);
   private snack = inject(MatSnackBar);
+  private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
 
   districts = signal<string[]>([]);
   taluks = signal<string[]>([]);
@@ -62,10 +67,48 @@ export class CenterListComponent {
   form: Center = this.blank();
   private files: Record<string, File> = {};
 
+  // ---- Wizard ----
+  readonly sections = [
+    { key: 'academic', label: 'Academic & Type' },
+    { key: 'location', label: 'Center Location' },
+    { key: 'details', label: 'Center Details' },
+    { key: 'courses', label: 'Course Details' },
+    { key: 'mou', label: 'MOU Details' },
+    { key: 'documents', label: 'Documents' },
+  ];
+  tabIndex = signal(0);
+
+  // ---- View filters ----
+  fDistrict = signal('');
+  fTaluk = signal('');
+  fGp = signal('');
+  fSearch = signal('');
+
+  filtered = computed(() => {
+    const d = this.fDistrict(), t = this.fTaluk(), g = this.fGp();
+    const q = this.fSearch().trim().toLowerCase();
+    return this.centers().filter((c) =>
+      (!d || c.district === d) &&
+      (!t || c.taluk === t) &&
+      (!g || c.gramPanchayat === g) &&
+      (!q || [c.name, c.code, c.centerType, c.principalName].some((v) => (v || '').toLowerCase().includes(q))));
+  });
+  districtOptions = computed(() => this.distinctVals(this.centers().map((c) => c.district)));
+  talukOptions = computed(() =>
+    this.distinctVals(this.centers().filter((c) => !this.fDistrict() || c.district === this.fDistrict()).map((c) => c.taluk)));
+  gpOptions = computed(() =>
+    this.distinctVals(this.centers().filter((c) =>
+      (!this.fDistrict() || c.district === this.fDistrict()) &&
+      (!this.fTaluk() || c.taluk === this.fTaluk())).map((c) => c.gramPanchayat)));
+
   constructor() {
     this.load();
     this.data.zones().subscribe((z) => this.zones.set(z));
     this.location.districts().subscribe((d) => this.districts.set(d));
+    // Side-nav "Create Center" opens the form via ?new=1; "View Centers" shows the list.
+    this.route.queryParamMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((p) => (p.get('new') !== null ? this.newCenter() : this.editing.set(false)));
   }
 
   onDistrict(): void {
@@ -114,6 +157,19 @@ export class CenterListComponent {
     this.data.centers().subscribe((c) => this.centers.set(c));
   }
 
+  /** Existing colleges to suggest (filtered by the chosen type + what's typed); free text still allowed. */
+  collegeSuggestions(): string[] {
+    const q = (this.form.name || '').toLowerCase().trim();
+    const type = this.form.centerType;
+    const seen = new Set<string>();
+    return this.centers()
+      .filter((c) => !!c.name && (!type || c.centerType === type))
+      .map((c) => c.name!)
+      .filter((n) => (seen.has(n) ? false : (seen.add(n), true)))
+      .filter((n) => !q || n.toLowerCase().includes(q))
+      .slice(0, 20);
+  }
+
   blank(): Center {
     return { name: '', courses: [], hasWebsite: false };
   }
@@ -124,7 +180,56 @@ export class CenterListComponent {
     this.taluks.set([]);
     this.gps.set([]);
     this.result.set(null);
+    this.tabIndex.set(0);
     this.editing.set(true);
+  }
+
+  // ---- Wizard helpers ----
+  private has(v: unknown): boolean {
+    return v !== undefined && v !== null && String(v).trim() !== '';
+  }
+  private anyDocChosen(): boolean {
+    return Object.keys(this.files).length > 0 || (this.form.documents?.length ?? 0) > 0;
+  }
+  private sectionFields(key: string): boolean[] {
+    const f = this.form;
+    switch (key) {
+      case 'academic':
+        return f.id
+          ? [this.has(f.academicYear), this.has(f.centerType), this.has(f.name)]
+          : [this.has(f.academicYear), this.has(f.centerType), this.has(f.name), this.has(f.userId), this.has(f.password)];
+      case 'location':
+        return [this.has(f.district), this.has(f.taluk), this.has(f.gramPanchayat), this.has(f.address), this.has(f.pincode), this.has(f.zoneId)];
+      case 'details':
+        return [this.has(f.email), this.has(f.officeNumber), this.has(f.principalName), this.has(f.principalNumber)];
+      case 'courses':
+        return [(f.courses?.length ?? 0) > 0, this.has(f.totalStrength), this.has(f.strengthTotal)];
+      case 'mou':
+        return [this.has(f.dateOfMou), this.has(f.mouEndDate), this.has(f.contractDuration)];
+      case 'documents':
+        return [this.anyDocChosen()];
+      default:
+        return [];
+    }
+  }
+  progress(key: string): number {
+    const a = this.sectionFields(key);
+    return a.length ? Math.round((a.filter(Boolean).length / a.length) * 100) : 0;
+  }
+  isComplete(key: string): boolean { return this.progress(key) === 100; }
+  overall(): number {
+    const a = this.sections.flatMap((s) => this.sectionFields(s.key));
+    return a.length ? Math.round((a.filter(Boolean).length / a.length) * 100) : 0;
+  }
+  goTo(i: number): void { if (i >= 0 && i < this.sections.length) this.tabIndex.set(i); }
+  get isLastTab(): boolean { return this.tabIndex() === this.sections.length - 1; }
+
+  // ---- Filter helpers ----
+  private distinctVals(vals: (string | undefined)[]): string[] {
+    return [...new Set(vals.filter((v): v is string => !!v && v.trim() !== ''))].sort();
+  }
+  clearFilters(): void {
+    this.fDistrict.set(''); this.fTaluk.set(''); this.fGp.set(''); this.fSearch.set('');
   }
 
   edit(c: Center): void {
@@ -132,6 +237,7 @@ export class CenterListComponent {
     this.files = {};
     this.taluks.set([]);
     this.gps.set([]);
+    this.tabIndex.set(0);
     this.editing.set(true);
     if (c.district) this.location.taluks(c.district).subscribe((t) => this.taluks.set(t));
     if (c.district && c.taluk) {
