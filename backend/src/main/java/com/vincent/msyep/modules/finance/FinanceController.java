@@ -15,9 +15,25 @@ import java.util.Map;
 public class FinanceController {
 
     private final FinanceService service;
+    private final GpBlueprintPdfService gpBlueprint;
 
-    public FinanceController(FinanceService service) {
+    public FinanceController(FinanceService service, GpBlueprintPdfService gpBlueprint) {
         this.service = service;
+        this.gpBlueprint = gpBlueprint;
+    }
+
+    /** GP "Blue Print" financial packet (cover + Kannada requisition letter + invoice) on the letterhead. */
+    @GetMapping("/gp-blueprint-pdf")
+    public org.springframework.http.ResponseEntity<org.springframework.core.io.ByteArrayResource> gpBlueprint(
+            @RequestParam(required = false) String gramPanchayat,
+            @RequestParam(required = false) String taluk,
+            @RequestParam(required = false) String district) {
+        byte[] pdf = gpBlueprint.build(gramPanchayat, taluk, district);
+        return org.springframework.http.ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=gp-blueprint.pdf")
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .body(new org.springframework.core.io.ByteArrayResource(pdf));
     }
 
     /** The finance documents table: filter by district / taluk / gram panchayat / center. */
@@ -48,7 +64,7 @@ public class FinanceController {
     }
 
     @PostMapping("/send-mail")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','FINANCE')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','FINANCE','STAFF')")
     public ApiResponse<Map<String, String>> sendMail(@Valid @RequestBody SendMailRequest req) {
         return ApiResponse.ok("Mail dispatch complete", service.sendDocuments(req));
     }
@@ -60,13 +76,13 @@ public class FinanceController {
     }
 
     @PostMapping("/gram-panchayats")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','FINANCE')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','FINANCE','STAFF')")
     public ApiResponse<GramPanchayat> saveGp(@RequestBody GramPanchayat gp) {
         return ApiResponse.ok("Saved", service.saveGramPanchayat(gp));
     }
 
     @DeleteMapping("/gram-panchayats/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','FINANCE')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','FINANCE','STAFF')")
     public ApiResponse<Void> deleteGp(@PathVariable String id) {
         service.deleteGramPanchayat(id);
         return ApiResponse.ok("Deleted", null);

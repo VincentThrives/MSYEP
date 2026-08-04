@@ -10,20 +10,23 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
 import { DataService } from '../../core/data.service';
-import { Center, FinanceRow } from '../../core/models';
+import { Center, FinanceRow, GramPanchayat } from '../../core/models';
 import { SearchSelectComponent } from '../../shared/search-select.component';
+import { MultiSearchSelectComponent } from '../../shared/multi-search-select.component';
 import { LocationPickerComponent } from '../../shared/location-picker.component';
+import { SendMailDialogComponent } from './send-mail-dialog.component';
 
 @Component({
   selector: 'app-finance-table',
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatTableModule, MatButtonModule, MatIconModule, SearchSelectComponent,
-    LocationPickerComponent,
+    MultiSearchSelectComponent, LocationPickerComponent,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatCheckboxModule,
-    MatTooltipModule, MatSnackBarModule,
+    MatTooltipModule, MatSnackBarModule, MatDialogModule,
   ],
   templateUrl: './finance-table.component.html',
   styleUrl: './finance-table.component.scss',
@@ -31,6 +34,7 @@ import { LocationPickerComponent } from '../../shared/location-picker.component'
 export class FinanceTableComponent {
   private data = inject(DataService);
   private snack = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
   cols = ['select', 'serialNo', 'studentName', 'district', 'taluk', 'gramPanchayat',
     'centerName', 'docs', 'send'];
@@ -41,6 +45,10 @@ export class FinanceTableComponent {
     { districts: [], taluks: [], gramPanchayats: [] });
   gpEmail = signal<string>('');
 
+  /** GP mail IDs managed under Finance → Mail; shown as a searchable multi-select. */
+  gpMails = signal<GramPanchayat[]>([]);
+  selectedMails = signal<string[]>([]);
+
   filter: { district?: string; taluk?: string; gramPanchayat?: string; centerId?: string } = {};
   selected = new Set<string>();
   selectedIds = signal<string[]>([]);
@@ -49,16 +57,45 @@ export class FinanceTableComponent {
   someSelected = computed(() => this.selectedIds().length > 0 && !this.allSelected());
 
   constructor() {
-    this.data.financeFilters().subscribe((f) => this.filters.set(f));
-    this.data.centers().subscribe((c) => this.centers.set(c));
+    this.data.financeFilters().subscribe({
+      next: (f) => this.filters.set(f),
+      error: (e) => this.err('filters', e),
+    });
+    this.data.centers().subscribe({ next: (c) => this.centers.set(c), error: (e) => this.err('centers', e) });
+    this.loadGpMails();
     this.fetch();
   }
 
+  private err(what: string, e: any): void {
+    this.snack.open(`Finance: couldn't load ${what} — ${e?.error?.message || e?.message || 'request failed'}`,
+      'OK', { duration: 5000 });
+  }
+
+  private loadGpMails(): void {
+    this.data.gramPanchayats().subscribe({
+      next: (r) => this.gpMails.set(r.filter((g) => (g.email || '').trim())),
+      error: (e) => this.err('GP mail IDs', e),
+    });
+  }
+
+  /**
+   * Options for the mail multi-select — a memoized computed so the array reference is STABLE
+   * between change-detection cycles. A plain function here returns a new array every call, which
+   * (bound to a signal input) drives an endless change-detection loop that freezes the page.
+   */
+  mailOptions = computed(() => this.gpMails().map((g) => ({
+    email: g.email!,
+    label: g.name ? `${g.name} — ${g.email}` : g.email!,
+  })));
+
   fetch(): void {
-    this.data.financeStudents(this.filter).subscribe((r) => {
-      this.rows.set(r);
-      this.selected.clear();
-      this.syncSelected();
+    this.data.financeStudents(this.filter).subscribe({
+      next: (r) => {
+        this.rows.set(r);
+        this.selected.clear();
+        this.syncSelected();
+      },
+      error: (e) => this.err('students', e),
     });
   }
 
@@ -101,12 +138,64 @@ export class FinanceTableComponent {
     this.dispatch(this.selectedIds());
   }
 
-  private dispatch(studentIds: string[]): void {
-    if (!studentIds.length) return;
-    this.data.sendMail({ studentIds }).subscribe({
+  /** Send the selected students' documents to the chosen GP mail IDs. */
+  sendToSelectedMails(): void {
+    if (!this.selectedMails().length) {
+      this.snack.open('Pick at least one Gram Panchayat mail ID', 'OK', { duration: 2500 });
+      return;
+    }
+    this.dispatch(this.selectedIds(), this.selectedMails());
+  }
+
+  /** Download the GP Blue Print financial packet for the current Gram Panchayat filter. */
+  downloadGpBlueprint(): void {
+    if (!this.filter.gramPanchayat) {
+      this.snack.open('Select a Gram Panchayat filter first', 'OK', { duration: 2500 });
+      return;
+    }
+    this.data.gpBlueprintPdf({
+      gramPanchayat: this.filter.gramPanchayat, taluk: this.filter.taluk, district: this.filter.district,
+    }).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `GP-Blueprint-${this.filter.gramPanchayat}.pdf`; a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      },
+      error: (e) => this.snack.open(e?.error?.message || 'Could not build GP blueprint', 'OK', { duration: 3000 }),
+    });
+  }
+
+  private dispatch(studentIds: string[], recipientEmails?: string[]): void {
+    if (!studentIds.length) {
+      this.snack.open('Select at least one student row first', 'OK', { duration: 2500 });
+      return;
+    }
+    // Show a preview (subject, body, recipients, attachment + student count) before sending.
+    const ref = this.dialog.open(SendMailDialogComponent, {
+      width: '600px', maxWidth: '92vw',
+      data: {
+        recipients: recipientEmails ?? [],
+        studentCount: studentIds.length,
+        gramPanchayat: this.filter.gramPanchayat, taluk: this.filter.taluk, district: this.filter.district,
+      },
+    });
+    ref.afterClosed().subscribe((result?: { subject: string; body: string }) => {
+      if (!result) return; // cancelled
+      this.doDispatch(studentIds, recipientEmails, result.subject, result.body);
+    });
+  }
+
+  private doDispatch(studentIds: string[], recipientEmails: string[] | undefined, subject: string, body: string): void {
+    // Attach the GP Blue Print packet to the GP mail when a Gram Panchayat is filtered.
+    this.data.sendMail({
+      studentIds, recipientEmails, subject, body,
+      gramPanchayat: this.filter.gramPanchayat, taluk: this.filter.taluk, district: this.filter.district,
+    }).subscribe({
       next: (res) => {
         const sent = Object.values(res).filter((v) => v.startsWith('SENT')).length;
-        this.snack.open(`Mail dispatched: ${sent}/${studentIds.length} sent`, 'OK', { duration: 3500 });
+        const to = recipientEmails?.length ? ` to ${recipientEmails.length} mail ID(s)` : '';
+        this.snack.open(`Mail dispatched${to}: ${sent}/${studentIds.length} sent`, 'OK', { duration: 3500 });
       },
       error: (e) => this.snack.open(e?.error?.message || 'Send failed', 'OK', { duration: 3500 }),
     });

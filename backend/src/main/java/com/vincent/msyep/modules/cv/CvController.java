@@ -54,14 +54,18 @@ public class CvController {
 
     @GetMapping("/download")
     public ResponseEntity<ByteArrayResource> download(@RequestParam(required = false) String studentId,
+                                                      @RequestParam(required = false, defaultValue = "false") boolean inline,
                                                       @AuthenticationPrincipal MsyepPrincipal p) {
         String sid = studentId(p, studentId);
-        if (!service.isPaid(sid)) {
+        // Admins can view/download any resume without the payment gate; students must have paid.
+        boolean admin = p != null && ("ADMIN".equals(p.role()) || "SUPER_ADMIN".equals(p.role()));
+        if (!admin && !service.isPaid(sid)) {
             return ResponseEntity.status(402).build(); // Payment Required
         }
-        byte[] pdf = service.buildCv(sid);
+        byte[] pdf = service.buildCv(sid, !admin);
+        String disposition = (inline ? "inline" : "attachment") + "; filename=MSYEP-Resume.pdf";
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=MSYEP-Resume.pdf")
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(new ByteArrayResource(pdf));
     }

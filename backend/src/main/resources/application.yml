@@ -42,6 +42,12 @@ razorpay:
   key-id: ${RAZORPAY_KEY_ID:}
   key-secret: ${RAZORPAY_KEY_SECRET:}
 
+# WhatsApp Cloud API (entrance result to student). Leave blank → logs the ready PDF (no send).
+whatsapp:
+  token: ${WHATSAPP_TOKEN:}
+  phone-number-id: ${WHATSAPP_PHONE_NUMBER_ID:}
+  api-version: ${WHATSAPP_API_VERSION:v20.0}
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

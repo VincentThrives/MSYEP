@@ -234,6 +234,12 @@ export interface Zone {
   tcAccepted?: boolean;
   status?: string;
   registrationDate?: string;
+  // Franchise certificate / MOU
+  franchiseeName?: string;
+  registrationNo?: string;
+  issueDate?: string;
+  validTill?: string;   // computed on the backend (issueDate + 2 years)
+  territory?: string;   // derived from membershipTier
   // existing geo/contact
   district?: string;
   taluk?: string;
@@ -281,7 +287,17 @@ export const ZONE_DOC_SLOTS: { type: string; label: string }[] = [
   { type: 'ngoDarpan', label: 'NGO Darpan Copy' },
   { type: 'doc12A80G', label: '12A / 80G Copy' },
   { type: 'building', label: 'Building (Own / Rent) Copy' },
+  // Used to build the Franchise Certificate + MOU. The "logo" slot above is the franchise logo.
+  { type: 'franchiseeSignature', label: 'Franchisee Signature (for certificate & MOU)' },
 ];
+
+/** Territory granted per membership tier — mirrors the backend FranchiseTerms. */
+export const MEMBERSHIP_TERRITORY: Record<string, string> = {
+  Silver: '1 Hobli',
+  Gold: '1 Taluk',
+  Platinum: '3 Taluks',
+  Diamond: '1 District',
+};
 
 export interface CenterDocument {
   type: string;
@@ -425,19 +441,15 @@ export interface CenterDocSlot {
 
 /** Document upload section headings, in display order. */
 export const CENTER_DOC_GROUPS: { key: string; title: string }[] = [
-  { key: 'documents', title: 'Center Documents Uploads (separate files · max 500 KB per file)' },
+  { key: 'documents', title: 'Center Documents' },
   { key: 'program', title: 'In Center MSYEP Program Photos' },
 ];
 
 /** Document upload slots shown on the center form. */
 export const CENTER_DOC_SLOTS: CenterDocSlot[] = [
-  // --- Center Documents Uploads ---
-  { group: 'documents', type: 'buildingBoard', label: 'Center Building Name Board photo / College Logo' },
-  { group: 'documents', type: 'kitReceived', label: 'KP MSYEP Kit Received Photo' },
-  { group: 'documents', type: 'requisitionSigned', label: 'Requisition received signed copy' },
-  { group: 'documents', type: 'semInfoCopy', label: '3rd/4th sem · PUC · ITI · GTTC · hostels (Principal Signature) info copy' },
+  // --- Center Documents ---
   { group: 'documents', type: 'mouSigned', label: 'Center MOU Signatured Copy' },
-  { group: 'documents', type: 'entranceTest', label: 'Students Entrance test Writing Photo & Wrote copies' },
+  { group: 'documents', type: 'principalSignature', label: 'Principal Signature (for Batch Approval PDF)' },
   // --- In Center MSYEP Program Photos ---
   { group: 'program', type: 'residentialProof', label: 'KP MSYEP selected students residentials proof / Enrollment application proof (with GP/MC/CMC/TMC/PP) Signed Copies (PDF)' },
   { group: 'program', type: 'theoryClassPhoto', label: 'KP MSYEP Theory class photo (08 Student preparation info) — attach PDF' },
@@ -469,6 +481,8 @@ export interface Student {
   gender?: string;
   dateOfBirth?: string;
   caste?: string;
+  fatherName?: string;
+  motherName?: string;
   // Education & job
   educationalQualification?: string;
   admissionYear?: string;
@@ -477,6 +491,22 @@ export interface Student {
   hobbies?: string[];
   interestedCourses?: string[];
   careerGoal?: string;
+  // Structured education — SSLC/10th (mandatory), PU/Diploma, Degree (optional)
+  // markType = 'Percentage' | 'CGPA'; the value goes in the matching *Percent field.
+  sslcSchool?: string;
+  sslcMarkType?: string;
+  sslcPercent?: string;
+  sslcYear?: string;
+  puSchool?: string;
+  puMarkType?: string;
+  puPercent?: string;
+  puYear?: string;
+  puStream?: string;
+  degreeCollege?: string;
+  degreeMarkType?: string;
+  degreePercent?: string;
+  degreeYear?: string;
+  degreeStream?: string;
   centerId?: string;
   zoneId?: string;
   // Address

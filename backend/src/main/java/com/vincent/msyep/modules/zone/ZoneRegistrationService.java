@@ -13,16 +13,12 @@ import org.springframework.util.StringUtils;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.Map;
 
 /** Franchise / zone sign-up: auto code, ZONE login, Pending status. */
 @Service
 public class ZoneRegistrationService {
 
     private static final Logger log = LoggerFactory.getLogger(ZoneRegistrationService.class);
-
-    private static final Map<String, Integer> TIER_AMOUNT = Map.of(
-            "Silver", 75000, "Gold", 100000, "Platinum", 125000, "Diamond", 150000);
 
     private final ZoneRepository zones;
     private final UserRepository users;
@@ -55,9 +51,11 @@ public class ZoneRegistrationService {
         input.setId(null);
         input.setCode(code);
         input.setRegistrationDate(LocalDate.now().toString());
-        if (input.getMembershipTier() != null) {
-            input.setMembershipAmount(TIER_AMOUNT.get(input.getMembershipTier()));
+        // Default the certificate issue date to today when not supplied, then derive amount/territory/validity.
+        if (!StringUtils.hasText(input.getIssueDate())) {
+            input.setIssueDate(LocalDate.now().toString());
         }
+        FranchiseTerms.apply(input);
         if (!StringUtils.hasText(input.getStatus())) input.setStatus("PENDING");
         input.setCreatedAt(Instant.now());
         input.setPassword(null); // never persist the plaintext password

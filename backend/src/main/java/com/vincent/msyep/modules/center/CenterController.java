@@ -21,10 +21,13 @@ public class CenterController {
 
     private final CenterService service;
     private final CenterRegistrationService registration;
+    private final CenterBatchApprovalPdfService batchApproval;
 
-    public CenterController(CenterService service, CenterRegistrationService registration) {
+    public CenterController(CenterService service, CenterRegistrationService registration,
+                            CenterBatchApprovalPdfService batchApproval) {
         this.service = service;
         this.registration = registration;
+        this.batchApproval = batchApproval;
     }
 
     @GetMapping
@@ -56,12 +59,14 @@ public class CenterController {
         return ApiResponse.ok(result.emailNote(), result);
     }
 
-    /** Download the registration PDF for a center (same format that is emailed on creation). */
-    @GetMapping("/{id}/registration-pdf")
-    public ResponseEntity<ByteArrayResource> registrationPdf(@PathVariable String id) {
-        byte[] pdf = registration.pdfFor(id);
+    /** Download the filled "Centers Batch Approval" PDF for a center (per-center data). */
+    @GetMapping("/{id}/batch-approval-pdf")
+    public ResponseEntity<ByteArrayResource> batchApprovalPdf(@PathVariable String id,
+                                                              @RequestParam(required = false, defaultValue = "false") boolean inline) {
+        byte[] pdf = batchApproval.build(id);
+        String disposition = (inline ? "inline" : "attachment") + "; filename=batch-approval-" + id + ".pdf";
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=center-" + id + ".pdf")
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(new ByteArrayResource(pdf));
     }

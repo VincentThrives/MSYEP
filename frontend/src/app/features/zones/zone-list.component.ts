@@ -10,6 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { forkJoin, of, Observable } from 'rxjs';
 
@@ -18,7 +19,7 @@ import { SearchSelectComponent } from '../../shared/search-select.component';
 import { LocationPickerComponent } from '../../shared/location-picker.component';
 import { TermsComponent } from '../../shared/terms.component';
 import {
-  GENDERS, INVESTMENT_CAPACITY, MEMBERSHIP_TIERS, OWN_RENT, START_TIMELINE,
+  GENDERS, INVESTMENT_CAPACITY, MEMBERSHIP_TIERS, MEMBERSHIP_TERRITORY, OWN_RENT, START_TIMELINE,
   Zone, ZoneRegistrationResult, ZONE_DOC_SLOTS,
 } from '../../core/models';
 
@@ -28,7 +29,7 @@ import {
   imports: [
     CommonModule, FormsModule, MatTableModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatCheckboxModule, MatTabsModule, MatSnackBarModule,
-    SearchSelectComponent, LocationPickerComponent, TermsComponent,
+    MatTooltipModule, SearchSelectComponent, LocationPickerComponent, TermsComponent,
   ],
   templateUrl: './zone-list.component.html',
   styleUrl: './zone-list.component.scss',
@@ -61,6 +62,7 @@ export class ZoneListComponent {
     { key: 'owner', label: 'Owner Details' },
     { key: 'kyc', label: 'KYC & Documents' },
     { key: 'fit', label: 'Business Fit' },
+    { key: 'certificate', label: 'Franchise Certificate' },
     { key: 'membership', label: 'Membership & Submit' },
   ];
   tabIndex = signal(0);
@@ -134,15 +136,78 @@ export class ZoneListComponent {
         return [this.has(f.ownerName), this.has(f.contactNumber), this.has(f.email),
           this.has(f.fullAddress), this.has(f.district), this.has(f.taluk), this.has(f.gramPanchayat)];
       case 'kyc':
-        return [this.has(f.aadhaarNumber), this.has(f.panNumber), this.has(f.bankAccountDetails)];
+        // Logo + signature are mandatory — they brand every certificate & MOU.
+        return [this.has(f.aadhaarNumber), this.has(f.panNumber), this.has(f.bankAccountDetails),
+          this.hasDoc('logo'), this.hasDoc('franchiseeSignature')];
       case 'fit':
         return [this.has(f.investmentCapacity), this.has(f.preferredLocation),
           this.has(f.spaceOwnership), this.has(f.spaceSqft), this.has(f.startTimeline)];
+      case 'certificate':
+        return [this.has(f.franchiseeName), this.has(f.registrationNo), this.has(f.issueDate)];
       case 'membership':
         return [this.has(f.membershipTier), f.tcAccepted === true];
       default:
         return [];
     }
+  }
+
+  /** Live "valid till" preview = issue date + 2 years (backend recomputes authoritatively). */
+  validTillPreview(): string | null {
+    const d = this.form.issueDate;
+    if (!d) return null;
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return null;
+    dt.setFullYear(dt.getFullYear() + 2);
+    return dt.toISOString().slice(0, 10);
+  }
+
+  /** Territory granted for the selected tier. */
+  territoryPreview(): string | null {
+    return this.form.membershipTier ? (MEMBERSHIP_TERRITORY[this.form.membershipTier] ?? null) : null;
+  }
+
+  /** Territory granted for a given tier name (shown on the tier cards). */
+  territoryFor(tier: string): string {
+    return MEMBERSHIP_TERRITORY[tier] ?? '';
+  }
+
+  downloading = signal(false);
+
+  /** Download the personalised franchise MOU after the zone is submitted. */
+  downloadMou(id: string): void {
+    this.grab(this.data.zoneMou(id), `Franchise-MOU-${id}.pdf`);
+  }
+
+  /** Download the franchise certificate after the zone is submitted. */
+  downloadCertificate(id: string): void {
+    this.grab(this.data.zoneCertificate(id), `Franchise-Certificate-${id}.pdf`);
+  }
+
+  /** Generate + email both documents to the franchise's contact email. */
+  emailDocuments(z: Zone): void {
+    if (!z.id) return;
+    this.snack.open('Sending certificate & MOU…', undefined, { duration: 1500 });
+    this.data.sendZoneDocuments(z.id).subscribe({
+      next: (r) => this.snack.open(r?.note || 'Documents sent', 'OK', { duration: 4000 }),
+      error: (e) => this.snack.open(e?.error?.message || 'Send failed', 'OK', { duration: 3000 }),
+    });
+  }
+
+  private grab(obs: Observable<Blob>, filename: string): void {
+    this.downloading.set(true);
+    obs.subscribe({
+      next: (blob) => {
+        this.downloading.set(false);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename; a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: (e) => {
+        this.downloading.set(false);
+        this.snack.open(e?.error?.message || 'Download failed', 'OK', { duration: 3000 });
+      },
+    });
   }
   progress(key: string): number {
     const a = this.sectionFields(key);
@@ -184,6 +249,17 @@ export class ZoneListComponent {
     return this.form.documents?.find((d) => d.type === type)?.filename ?? null;
   }
 
+  /** Documents that are mandatory to save a zone (branding for the certificate & MOU). */
+  readonly requiredDocs = ['logo', 'franchiseeSignature'];
+  isRequiredDoc(type: string): boolean {
+    return this.requiredDocs.includes(type);
+  }
+
+  /** True if a document is provided — either uploaded in this session or already saved on the zone. */
+  hasDoc(type: string): boolean {
+    return !!this.files[type] || !!this.existingDocName(type);
+  }
+
   save(): void {
     if (!this.form.name && !this.form.organizationName) {
       this.snack.open('Organization / Zone name is required', 'OK', { duration: 2500 });
@@ -192,6 +268,13 @@ export class ZoneListComponent {
     if (!this.form.id && (!this.form.userId || !this.form.password)) {
       this.snack.open('User ID and Password are required for the franchise login', 'OK', { duration: 3500 });
       return;
+    }
+    // Logo + signature are strongly recommended (they brand the certificate & MOU) but not mandatory —
+    // a zone can be created without them and they can be uploaded later; the MOU just leaves those
+    // spots blank until then. Warn once, but don't block the sign-up.
+    if (!this.form.id && (!this.hasDoc('logo') || !this.hasDoc('franchiseeSignature'))) {
+      this.snack.open('Tip: add the Organization Logo & Franchisee Signature (Documents tab) so the certificate & MOU are fully branded.',
+        'OK', { duration: 4000 });
     }
     if (!this.form.id && !this.form.tcAccepted) {
       this.snack.open('Please accept the Terms & Conditions', 'OK', { duration: 3000 });
@@ -224,6 +307,13 @@ export class ZoneListComponent {
         if (res) this.result.set(res);
         this.snack.open(res ? res.note : 'Zone saved', 'OK', { duration: 4000 });
         this.load();
+        // On a new sign-up, generate + email the certificate and MOU to the franchise.
+        if (res) {
+          this.data.sendZoneDocuments(id).subscribe({
+            next: (r) => this.snack.open(r?.note || 'Documents sent', 'OK', { duration: 4000 }),
+            error: () => {},
+          });
+        }
       },
       error: (e: any) => {
         this.saving.set(false);

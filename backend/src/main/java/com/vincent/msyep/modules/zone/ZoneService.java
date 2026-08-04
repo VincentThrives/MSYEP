@@ -102,6 +102,11 @@ public class ZoneService {
         e.setMembershipTier(c.getMembershipTier());
         e.setMembershipAmount(c.getMembershipAmount());
         e.setTcAccepted(c.isTcAccepted());
+        // Franchise certificate / MOU details (validTill + territory are derived below)
+        e.setFranchiseeName(c.getFranchiseeName());
+        e.setRegistrationNo(c.getRegistrationNo());
+        e.setIssueDate(c.getIssueDate());
+        FranchiseTerms.apply(e);
         if (c.getStatus() != null) e.setStatus(c.getStatus());
         if (c.getCourses() != null) e.setCourses(c.getCourses());
         if (c.getKitDetails() != null) e.setKitDetails(c.getKitDetails());

@@ -103,12 +103,38 @@ export class CenterListComponent {
 
   constructor() {
     this.load();
-    this.data.zones().subscribe((z) => this.zones.set(z));
+    this.data.zones().subscribe((z) => {
+      this.zones.set(z);
+      // If a zone is already chosen (zone/center login, or editing), fix the MOU period to it.
+      if (this.form.zoneId) this.applyZoneMou(this.form.zoneId);
+    });
     this.location.districts().subscribe((d) => this.districts.set(d));
     // Side-nav "Create Center" opens the form via ?new=1; "View Centers" shows the list.
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((p) => (p.get('new') !== null ? this.newCenter() : this.editing.set(false)));
+  }
+
+  /** Picking a zone fixes the center's MOU period to that zone's franchise validity. */
+  onZoneSelected(zoneId: string): void {
+    this.form.zoneId = zoneId;
+    this.applyZoneMou(zoneId);
+  }
+
+  /** Set MOU (from) = zone's certificate issue date, (to) = +2 years, contract = 2 Years. */
+  private applyZoneMou(zoneId?: string): void {
+    const zone = this.zones().find((z) => z.id === zoneId);
+    if (!zone?.issueDate) return;
+    this.form.dateOfMou = zone.issueDate;
+    this.form.mouEndDate = zone.validTill || this.plusYears(zone.issueDate, 2);
+    this.form.contractDuration = '2 Years';
+  }
+
+  private plusYears(iso: string, years: number): string {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    d.setFullYear(d.getFullYear() + years);
+    return d.toISOString().slice(0, 10);
   }
 
   onDistrict(): void {
@@ -265,6 +291,11 @@ export class CenterListComponent {
     return this.form.documents?.find((d) => d.type === type)?.filename ?? null;
   }
 
+  /** True if a document is provided — uploaded now or already saved on the center. */
+  hasDoc(type: string): boolean {
+    return !!this.files[type] || !!this.existingDocName(type);
+  }
+
   save(): void {
     if (!this.form.name) {
       this.snack.open('College / Center name is required', 'OK', { duration: 2500 });
@@ -272,6 +303,16 @@ export class CenterListComponent {
     }
     if (!this.form.id && (!this.form.userId || !this.form.password)) {
       this.snack.open('User ID and Password are required to create the center login', 'OK', { duration: 3500 });
+      return;
+    }
+    if (!this.hasDoc('centerLogo')) {
+      this.snack.open('Please upload the Center Logo (Center Details tab)', 'OK', { duration: 3500 });
+      this.tabIndex.set(this.sections.findIndex((s) => s.key === 'details'));
+      return;
+    }
+    if (!this.hasDoc('centerBuilding')) {
+      this.snack.open('Please upload the Center Building photo (Center Details tab)', 'OK', { duration: 3500 });
+      this.tabIndex.set(this.sections.findIndex((s) => s.key === 'details'));
       return;
     }
     this.saving.set(true);
@@ -328,13 +369,17 @@ export class CenterListComponent {
     });
   }
 
-  downloadCenterPdf(c: Center): void {
+  /** Download the per-center "Batch Approval" PDF, filled with this center's own data. */
+  downloadBatchApproval(c: Center): void {
     if (!c.id) return;
-    this.data.centerRegistrationPdf(c.id).subscribe((blob) => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = `Center-${c.name}.pdf`; a.click();
-      URL.revokeObjectURL(url);
+    this.data.centerBatchApprovalPdf(c.id).subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `Batch-Approval-${c.name}.pdf`; a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: (e) => this.snack.open(e?.error?.message || 'Could not build the batch approval PDF', 'OK', { duration: 3500 }),
     });
   }
 }

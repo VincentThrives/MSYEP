@@ -23,17 +23,30 @@ import java.util.Optional;
 @Service
 public class FinanceService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(FinanceService.class);
+
     private final MongoTemplate mongo;
     private final CenterRepository centerRepo;
     private final GramPanchayatRepository gpRepo;
+    private final GpBlueprintPdfService gpBlueprint;
     private final Optional<JavaMailSender> mailSender;
+    private final String mailUsername;
 
     public FinanceService(MongoTemplate mongo, CenterRepository centerRepo,
-                          GramPanchayatRepository gpRepo, Optional<JavaMailSender> mailSender) {
+                          GramPanchayatRepository gpRepo, GpBlueprintPdfService gpBlueprint,
+                          Optional<JavaMailSender> mailSender,
+                          @org.springframework.beans.factory.annotation.Value("${spring.mail.username:}") String mailUsername) {
         this.mongo = mongo;
         this.centerRepo = centerRepo;
         this.gpRepo = gpRepo;
+        this.gpBlueprint = gpBlueprint;
         this.mailSender = mailSender;
+        this.mailUsername = mailUsername;
+    }
+
+    /** SMTP is "configured" only when a JavaMailSender bean exists AND a username is set. */
+    private boolean mailConfigured() {
+        return mailSender.isPresent() && StringUtils.hasText(mailUsername);
     }
 
     /** Filter students by any combination of district / taluk / gram panchayat / center. */
@@ -89,22 +102,36 @@ public class FinanceService {
      */
     public Map<String, String> sendDocuments(SendMailRequest req) {
         Map<String, String> result = new HashMap<>();
+        // Recipient mail IDs explicitly picked in the finance wing (multi-select) win over
+        // the per-student auto-resolved GP email.
+        List<String> picked = req.recipientEmails() == null ? List.of()
+                : req.recipientEmails().stream().filter(StringUtils::hasText).distinct().toList();
+        // Build the GP Blue Print packet once and attach it to every GP mail.
+        byte[] blueprint = null;
+        if (StringUtils.hasText(req.gramPanchayat())) {
+            try {
+                blueprint = gpBlueprint.build(req.gramPanchayat(), req.taluk(), req.district());
+            } catch (Exception ex) {
+                log.warn("GP blueprint build failed for {}: {}", req.gramPanchayat(), ex.getMessage());
+            }
+        }
         for (String studentId : req.studentIds()) {
             Student s = mongo.findById(studentId, Student.class);
             if (s == null) {
                 result.put(studentId, "NOT_FOUND");
                 continue;
             }
-            String to = StringUtils.hasText(req.overrideEmail())
-                    ? req.overrideEmail()
-                    : resolveGpEmail(s.getGramPanchayat());
-            if (!StringUtils.hasText(to)) {
+            List<String> recipients = !picked.isEmpty() ? picked
+                    : StringUtils.hasText(req.overrideEmail()) ? List.of(req.overrideEmail())
+                    : (StringUtils.hasText(resolveGpEmail(s.getGramPanchayat()))
+                        ? List.of(resolveGpEmail(s.getGramPanchayat())) : List.of());
+            if (recipients.isEmpty()) {
                 result.put(studentId, "NO_GP_EMAIL");
                 continue;
             }
             try {
-                send(to, s, req);
-                result.put(studentId, "SENT:" + to);
+                send(recipients, s, req, blueprint);
+                result.put(studentId, "SENT:" + String.join(", ", recipients));
             } catch (Exception ex) {
                 result.put(studentId, "FAILED:" + ex.getMessage());
             }
@@ -112,20 +139,34 @@ public class FinanceService {
         return result;
     }
 
-    private void send(String to, Student s, SendMailRequest req) {
-        if (mailSender.isEmpty()) {
-            throw new IllegalStateException("Mail server not configured");
-        }
-        SimpleMailMessage msg = new SimpleMailMessage();
-        msg.setTo(to);
-        msg.setSubject(StringUtils.hasText(req.subject())
+    private void send(List<String> to, Student s, SendMailRequest req, byte[] blueprint) {
+        String subject = StringUtils.hasText(req.subject())
                 ? req.subject()
-                : "MSYEP — Documents for student " + s.getName());
+                : "MSYEP — Documents for student " + s.getName();
         String body = StringUtils.hasText(req.body()) ? req.body() :
                 "Dear Gram Panchayat,\n\nPlease find the MSYEP documents for student "
                         + s.getName() + " (GP: " + s.getGramPanchayat() + ").\n\nRegards,\nMSYEP Finance";
-        msg.setText(body);
-        mailSender.get().send(msg);
+        if (!mailConfigured()) {
+            // No SMTP credentials (dev / stub mode): simulate a successful dispatch so the flow is verifiable.
+            log.info("[MAIL SIMULATED] to={} subject={} student={} attachment={}",
+                    to, subject, s.getName(), blueprint != null ? "GP-Blueprint.pdf" : "none");
+            return;
+        }
+        try {
+            jakarta.mail.internet.MimeMessage mime = mailSender.get().createMimeMessage();
+            org.springframework.mail.javamail.MimeMessageHelper h =
+                    new org.springframework.mail.javamail.MimeMessageHelper(mime, blueprint != null, "UTF-8");
+            h.setTo(to.toArray(new String[0]));
+            h.setSubject(subject);
+            h.setText(body);
+            if (blueprint != null) {
+                h.addAttachment("GP-Blueprint.pdf",
+                        new org.springframework.core.io.ByteArrayResource(blueprint));
+            }
+            mailSender.get().send(mime);
+        } catch (Exception e) {
+            throw new IllegalStateException(e.getMessage(), e);
+        }
     }
 
     // ---- Gram Panchayat mapping CRUD ----

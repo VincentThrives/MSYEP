@@ -1,12 +1,25 @@
 package com.vincent.msyep.modules.sow;
 
+import com.itextpdf.io.font.constants.StandardFonts;
 import com.itextpdf.io.image.ImageDataFactory;
+import com.itextpdf.kernel.events.PdfDocumentEvent;
+import com.itextpdf.kernel.font.PdfFontFactory;
+import com.itextpdf.kernel.geom.Rectangle;
 import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfPage;
+import com.itextpdf.kernel.pdf.PdfReader;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
+import com.itextpdf.kernel.pdf.xobject.PdfFormXObject;
 import com.itextpdf.layout.Document;
+import com.itextpdf.layout.borders.Border;
+import com.itextpdf.layout.borders.SolidBorder;
+import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Image;
 import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.TextAlignment;
+import com.itextpdf.layout.properties.UnitValue;
 import com.vincent.msyep.common.exception.ResourceNotFoundException;
 import com.vincent.msyep.modules.center.Center;
 import com.vincent.msyep.modules.center.CenterRepository;
@@ -15,12 +28,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.LinkedHashMap;
@@ -33,6 +48,9 @@ import java.util.Optional;
 public class SowService {
 
     private static final Logger log = LoggerFactory.getLogger(SowService.class);
+    private static final String LETTERHEAD = "cba-letterhead.pdf";
+    private static final float HEADER_H = 156f;
+    private static final float FOOTER_H = 66f;
 
     /** Ordered text fields → labels for the PDF. */
     private static final Map<String, String> TEXT_LABELS = new LinkedHashMap<>();
@@ -145,54 +163,150 @@ public class SowService {
         return new DownloadResult(pdf, emailed, note);
     }
 
+    /** The inauguration date (yyyy-MM-dd) of a given program for a center, or null if not saved. */
+    public String programInaugurationDate(String centerId, int programIndex) {
+        return repo.findByCenterIdAndProgramIndex(centerId, programIndex)
+                .map(s -> s.getFields() != null ? s.getFields().get("inaugurationDate") : null)
+                .orElse(null);
+    }
+
+    /**
+     * Merge every saved SOW program for a center into a single PDF (each program already on the
+     * letterhead, with its fields + photos). Returns null if the center has no saved programs.
+     */
+    public byte[] allProgramsPdf(String centerId) {
+        Center center = centers.findById(centerId).orElse(null);
+        List<SowSubmission> list = repo.findByCenterId(centerId);
+        list.sort(java.util.Comparator.comparingInt(SowSubmission::getProgramIndex));
+        if (list.isEmpty()) return null;
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int added = 0;
+        try (PdfDocument dst = new PdfDocument(new PdfWriter(out))) {
+            for (SowSubmission s : list) {
+                try {
+                    byte[] one = buildPdf(s, center);
+                    try (PdfDocument src = new PdfDocument(new PdfReader(new java.io.ByteArrayInputStream(one)))) {
+                        src.copyPagesTo(1, src.getNumberOfPages(), dst);
+                    }
+                    added++;
+                } catch (Exception ex) {
+                    log.warn("SOW merge: program {} skipped: {}", s.getProgramIndex(), ex.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to merge SOW programs: " + e.getMessage());
+        }
+        return added == 0 ? null : out.toByteArray();
+    }
+
+    /** Build every saved SOW program for the center into a single ZIP. */
+    public byte[] downloadAllZip(String centerId) {
+        Center center = centers.findById(centerId).orElse(null);
+        List<SowSubmission> list = repo.findByCenterId(centerId);
+        list.sort(java.util.Comparator.comparingInt(SowSubmission::getProgramIndex));
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        int added = 0;
+        try (java.util.zip.ZipOutputStream zip = new java.util.zip.ZipOutputStream(out)) {
+            for (SowSubmission s : list) {
+                try {
+                    byte[] pdf = buildPdf(s, center);
+                    zip.putNextEntry(new java.util.zip.ZipEntry("SOW-Program-" + s.getProgramIndex() + ".pdf"));
+                    zip.write(pdf);
+                    zip.closeEntry();
+                    added++;
+                } catch (Exception ex) {
+                    log.warn("SOW zip: program {} skipped: {}", s.getProgramIndex(), ex.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to build SOW zip: " + e.getMessage());
+        }
+        if (added == 0) throw new ResourceNotFoundException("No saved SOW programs to download for this center");
+        return out.toByteArray();
+    }
+
     public record DownloadResult(byte[] pdf, boolean emailed, String note) {}
 
     private byte[] buildPdf(SowSubmission s, Center center) {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (PdfWriter writer = new PdfWriter(out);
-             PdfDocument pdf = new PdfDocument(writer);
-             Document doc = new Document(pdf)) {
-            doc.add(new Paragraph("KP-MSYEP — Statement of Work")
-                    .setBold().setFontSize(16).setTextAlignment(TextAlignment.CENTER));
-            doc.add(new Paragraph("Program " + s.getProgramIndex()
-                    + (center != null ? "  ·  " + nz(center.getName()) : ""))
-                    .setFontSize(11).setTextAlignment(TextAlignment.CENTER));
-            doc.add(new Paragraph(" ").setFontSize(4));
+             PdfDocument pdf = new PdfDocument(writer)) {
 
-            Map<String, String> f = s.getFields() == null ? Map.of() : s.getFields();
-            for (Map.Entry<String, String> e : TEXT_LABELS.entrySet()) {
-                String v = f.get(e.getKey());
-                if (StringUtils.hasText(v)) {
-                    doc.add(new Paragraph()
-                            .add(new com.itextpdf.layout.element.Text(e.getValue() + ": ").setBold())
-                            .add(new com.itextpdf.layout.element.Text(v))
-                            .setFontSize(10).setMarginBottom(2));
-                }
-            }
+            // Print the SOW on the YKTK letterhead (header + grey arc + footer) on every page.
+            applyLetterhead(pdf);
 
-            Map<String, String> ph = s.getPhotos() == null ? Map.of() : s.getPhotos();
-            boolean anyPhoto = ph.values().stream().anyMatch(StringUtils::hasText);
-            if (anyPhoto) {
-                doc.add(new Paragraph(" ").setFontSize(4));
-                doc.add(new Paragraph("Photos").setBold().setFontSize(11));
-                for (Map.Entry<String, String> e : PHOTO_LABELS.entrySet()) {
-                    String data = ph.get(e.getKey());
-                    byte[] img = decode(data);
-                    if (img != null) {
-                        try {
-                            doc.add(new Paragraph(e.getValue()).setFontSize(9).setBold().setMarginBottom(1));
-                            Image image = new Image(ImageDataFactory.create(img));
-                            image.setAutoScale(false);
-                            image.setWidth(120);
-                            doc.add(image);
-                        } catch (Exception ignored) { }
+            try (Document doc = new Document(pdf)) {
+                doc.setFont(PdfFontFactory.createFont(StandardFonts.TIMES_ROMAN));
+                doc.setMargins(HEADER_H + 12, 42, FOOTER_H + 12, 42);
+
+                doc.add(new Paragraph("KP-MSYEP — Statement of Work")
+                        .setBold().setFontSize(15).setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
+                doc.add(new Paragraph("Program " + s.getProgramIndex()
+                        + (center != null ? "  ·  " + nz(center.getName()) : ""))
+                        .setFontSize(11).setTextAlignment(TextAlignment.CENTER).setMarginBottom(10));
+
+                // Filled fields as a clean two-column table.
+                Map<String, String> f = s.getFields() == null ? Map.of() : s.getFields();
+                Table t = new Table(UnitValue.createPercentArray(new float[]{40, 60})).useAllAvailableWidth();
+                int rows = 0;
+                for (Map.Entry<String, String> e : TEXT_LABELS.entrySet()) {
+                    String v = f.get(e.getKey());
+                    if (StringUtils.hasText(v)) {
+                        t.addCell(sowCell(e.getValue(), true));
+                        t.addCell(sowCell(v, false));
+                        rows++;
                     }
+                }
+                if (rows > 0) doc.add(t);
+
+                // Uploaded program photos, each labelled, two per row.
+                Map<String, String> ph = s.getPhotos() == null ? Map.of() : s.getPhotos();
+                int shown = 0;
+                Table grid = new Table(2).useAllAvailableWidth().setMarginTop(12);
+                for (Map.Entry<String, String> e : PHOTO_LABELS.entrySet()) {
+                    byte[] img = decode(ph.get(e.getKey()));
+                    if (img == null) continue;
+                    Cell c = new Cell().setBorder(new SolidBorder(0.5f)).setPadding(4);
+                    c.add(new Paragraph(e.getValue()).setBold().setFontSize(9).setMarginBottom(3));
+                    try { c.add(new Image(ImageDataFactory.create(img)).setAutoScale(true)); }
+                    catch (Exception ex) { continue; }
+                    grid.addCell(c);
+                    shown++;
+                }
+                if (shown > 0) {
+                    doc.add(new Paragraph("Program Photos").setBold().setFontSize(12).setMarginTop(12));
+                    if (shown % 2 == 1) grid.addCell(new Cell().setBorder(Border.NO_BORDER));
+                    doc.add(grid);
                 }
             }
         } catch (Exception e) {
             throw new IllegalStateException("Failed to build SOW PDF: " + e.getMessage());
         }
         return out.toByteArray();
+    }
+
+    /** Draw the full YKTK letterhead page as the background of every page. */
+    private void applyLetterhead(PdfDocument pdf) {
+        try (InputStream in = new ClassPathResource(LETTERHEAD).getInputStream();
+             PdfDocument lh = new PdfDocument(new PdfReader(in))) {
+            PdfFormXObject letterhead = lh.getPage(1).copyAsFormXObject(pdf);
+            pdf.addEventHandler(PdfDocumentEvent.END_PAGE, ev -> {
+                PdfPage page = ((PdfDocumentEvent) ev).getPage();
+                Rectangle p = page.getPageSize();
+                new PdfCanvas(page.newContentStreamBefore(), page.getResources(), pdf)
+                        .addXObjectFittedIntoRectangle(letterhead, new Rectangle(0, 0, p.getWidth(), p.getHeight()));
+            });
+        } catch (Exception e) {
+            log.warn("SOW letterhead missing: {}", e.getMessage());
+        }
+    }
+
+    private Cell sowCell(String text, boolean label) {
+        Cell c = new Cell().add(new Paragraph(nz(text)).setFontSize(9).setMargin(0))
+                .setBorder(new SolidBorder(new com.itextpdf.kernel.colors.DeviceRgb(200, 210, 205), 0.5f))
+                .setPadding(3);
+        if (label) c.setBold();
+        return c;
     }
 
     private static byte[] decode(String dataUrl) {

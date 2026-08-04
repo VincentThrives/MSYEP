@@ -16,7 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/sow")
-@PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','ZONE','CENTER')")
+@PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','ZONE','CENTER','STAFF')")
 public class SowController {
 
     private final SowService service;
@@ -58,6 +58,17 @@ public class SowController {
     }
 
     /** Download the one-page PDF; also emails it to the center's college mail-id. */
+    /** Download every saved SOW program for the center as a single ZIP. */
+    @PostMapping("/download-all")
+    public ResponseEntity<ByteArrayResource> downloadAll(@RequestParam(required = false) String centerId,
+                                                         @AuthenticationPrincipal MsyepPrincipal p) {
+        byte[] zip = service.downloadAllZip(centerId(p, centerId));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=KP-MSYEP-SOW-Programs.zip")
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .body(new ByteArrayResource(zip));
+    }
+
     @PostMapping("/{programIndex}/download")
     public ResponseEntity<ByteArrayResource> download(@PathVariable int programIndex,
                                                       @RequestParam(required = false) String centerId,

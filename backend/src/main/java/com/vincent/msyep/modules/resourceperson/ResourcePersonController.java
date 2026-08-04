@@ -15,7 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/resource-persons")
-@PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','ZONE','CENTER')")
+@PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','ZONE','CENTER','STAFF')")
 public class ResourcePersonController {
 
     private final ResourcePersonService service;

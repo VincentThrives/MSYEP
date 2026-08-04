@@ -3,11 +3,24 @@ package com.vincent.msyep.modules.entrance;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.itextpdf.io.image.ImageDataFactory;
+import com.itextpdf.kernel.events.PdfDocumentEvent;
+import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfPage;
+import com.itextpdf.kernel.pdf.PdfReader;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
+import com.itextpdf.kernel.pdf.xobject.PdfFormXObject;
 import com.itextpdf.layout.Document;
+import com.itextpdf.layout.borders.Border;
+import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Image;
 import com.itextpdf.layout.element.Paragraph;
+import com.itextpdf.layout.element.Table;
+import com.itextpdf.layout.properties.HorizontalAlignment;
+import com.itextpdf.layout.properties.TextAlignment;
+import com.itextpdf.layout.properties.UnitValue;
+import com.itextpdf.layout.properties.VerticalAlignment;
 import com.vincent.msyep.common.exception.ResourceNotFoundException;
 import com.vincent.msyep.modules.entrance.EntranceAttempt.AttemptItem;
 import com.vincent.msyep.modules.entrance.dto.EntranceDtos.*;
@@ -22,6 +35,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -44,15 +58,18 @@ public class EntranceTestService {
     private final QuestionBankRepository bank;
     private final EntranceAttemptRepository attempts;
     private final StudentRepository students;
+    private final com.vincent.msyep.modules.notify.WhatsAppService whatsApp;
     private final String uploadsDir;
     private final Random rnd = new Random();
 
     public EntranceTestService(QuestionBankRepository bank, EntranceAttemptRepository attempts,
                                StudentRepository students,
+                               com.vincent.msyep.modules.notify.WhatsAppService whatsApp,
                                @Value("${app.uploads-dir:uploads}") String uploadsDir) {
         this.bank = bank;
         this.attempts = attempts;
         this.students = students;
+        this.whatsApp = whatsApp;
         this.uploadsDir = uploadsDir;
     }
 
@@ -243,8 +260,11 @@ public class EntranceTestService {
                     .map(Student::getPhone).orElse(null);
             String outcome = attempt.isPassed() ? "PASS" : "FAIL";
             if (org.springframework.util.StringUtils.hasText(phone)) {
-                log.info("Entrance result for {} ({}/{} - {}) queued for WhatsApp to {} — gateway pending.",
-                        attempt.getStudentName(), attempt.getScore(), attempt.getTotal(), outcome, phone);
+                // Generate the result PDF (with letterhead) so it is ready to attach.
+                byte[] pdf = resultPdf(attempt.getId());
+                whatsApp.sendResultPdf(phone, attempt.getStudentName(), outcome,
+                        attempt.getScore(), attempt.getTotal(), pdf,
+                        "EntranceResult-" + attempt.getStudentName() + ".pdf");
             } else {
                 log.info("Entrance result for {} not sent — no WhatsApp/mobile number on file.",
                         attempt.getStudentName());
@@ -278,29 +298,81 @@ public class EntranceTestService {
         EntranceAttempt a = attempts.findById(attemptId)
                 .orElseThrow(() -> new ResourceNotFoundException("Attempt not found: " + attemptId));
         ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] template = readFormatTemplate();
         try (PdfWriter writer = new PdfWriter(out);
-             PdfDocument pdf = new PdfDocument(writer);
-             Document doc = new Document(pdf)) {
-            doc.add(new Paragraph("MSYEP — Entrance Test Result").setBold().setFontSize(16));
-            doc.add(new Paragraph("Candidate: " + nz(a.getStudentName())));
-            doc.add(new Paragraph("Score: " + a.getScore() + " / " + a.getTotal()));
-            doc.add(new Paragraph("Result: " + (a.isPassed() ? "PASS" : "FAIL")).setBold());
-            if (StringUtils.hasText(a.getSelfiePath())) {
-                try {
-                    Path p = Paths.get(uploadsDir).resolve(a.getSelfiePath().replace("uploads/", ""));
-                    if (Files.exists(p)) {
-                        Image img = new Image(ImageDataFactory.create(p.toAbsolutePath().toString()));
-                        img.setWidth(120);
-                        doc.add(new Paragraph("Selfie:"));
-                        doc.add(img);
-                    }
-                } catch (Exception ignored) { }
+             PdfDocument pdf = new PdfDocument(writer)) {
+
+            // Stamp the letterhead / format page as a background behind every page.
+            if (template != null) {
+                try (PdfDocument tpl = new PdfDocument(new PdfReader(new ByteArrayInputStream(template)))) {
+                    PdfFormXObject bg = tpl.getFirstPage().copyAsFormXObject(pdf);
+                    pdf.addEventHandler(PdfDocumentEvent.END_PAGE, event -> {
+                        PdfPage page = ((PdfDocumentEvent) event).getPage();
+                        new PdfCanvas(page.newContentStreamBefore(), page.getResources(), page.getDocument())
+                                .addXObjectFittedIntoRectangle(bg, page.getPageSize());
+                    });
+                } catch (Exception ex) {
+                    log.warn("Could not apply entrance format background: {}", ex.getMessage());
+                }
             }
-            doc.add(new Paragraph("\nThis is an auto-generated result.").setItalic().setFontSize(10));
+
+            try (Document doc = new Document(pdf)) {
+                // Leave room for the letterhead header (top) and footer (bottom).
+                float top = 160, bottom = 80, side = 40;
+                doc.setMargins(top, side, bottom, side);
+
+                // A single full-height cell lets us center the result block both
+                // horizontally and vertically in the space below the letterhead.
+                // Trim a few points off the band so cell/table padding can't spill to page 2.
+                float bandHeight = PageSize.A4.getHeight() - top - bottom - 12;
+                Cell block = new Cell()
+                        .setBorder(Border.NO_BORDER)
+                        .setPadding(0)
+                        .setHeight(bandHeight)
+                        .setVerticalAlignment(VerticalAlignment.MIDDLE)
+                        .setTextAlignment(TextAlignment.CENTER);
+
+                block.add(new Paragraph("Entrance Test Result").setBold().setFontSize(16)
+                        .setTextAlignment(TextAlignment.CENTER).setMarginBottom(12));
+                block.add(new Paragraph("Candidate: " + nz(a.getStudentName())).setFontSize(12)
+                        .setTextAlignment(TextAlignment.CENTER));
+                block.add(new Paragraph("Score: " + a.getScore() + " / " + a.getTotal()).setFontSize(12)
+                        .setTextAlignment(TextAlignment.CENTER));
+                block.add(new Paragraph("Result: " + (a.isPassed() ? "PASS" : "FAIL"))
+                        .setBold().setFontSize(13).setTextAlignment(TextAlignment.CENTER));
+                if (StringUtils.hasText(a.getSelfiePath())) {
+                    try {
+                        Path p = Paths.get(uploadsDir).resolve(a.getSelfiePath().replace("uploads/", ""));
+                        if (Files.exists(p)) {
+                            block.add(new Paragraph("Photo:").setFontSize(11).setMarginTop(8)
+                                    .setTextAlignment(TextAlignment.CENTER));
+                            Image img = new Image(ImageDataFactory.create(p.toAbsolutePath().toString()));
+                            img.setWidth(120);
+                            img.setHorizontalAlignment(HorizontalAlignment.CENTER);
+                            block.add(img);
+                        }
+                    } catch (Exception ignored) { }
+                }
+                block.add(new Paragraph("\nThis is an auto-generated result.").setItalic().setFontSize(9)
+                        .setTextAlignment(TextAlignment.CENTER));
+
+                Table wrap = new Table(1).setWidth(UnitValue.createPercentValue(100));
+                wrap.addCell(block);
+                doc.add(wrap);
+            }
         } catch (Exception e) {
             throw new IllegalStateException("Failed to generate result PDF: " + e.getMessage());
         }
         return out.toByteArray();
+    }
+
+    /** The bundled entrance-test letterhead / format page (null if missing). */
+    private byte[] readFormatTemplate() {
+        try (InputStream in = new ClassPathResource("entrance-format.pdf").getInputStream()) {
+            return in.readAllBytes();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private String storeSelfie(String attemptId, MultipartFile selfie) {

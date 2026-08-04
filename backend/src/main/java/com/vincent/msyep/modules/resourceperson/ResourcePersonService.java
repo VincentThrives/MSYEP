@@ -1,7 +1,13 @@
 package com.vincent.msyep.modules.resourceperson;
 
+import com.itextpdf.kernel.geom.Rectangle;
 import com.itextpdf.kernel.pdf.PdfDocument;
+import com.itextpdf.kernel.pdf.PdfPage;
+import com.itextpdf.kernel.pdf.PdfReader;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
+import com.itextpdf.kernel.events.PdfDocumentEvent;
+import com.itextpdf.kernel.pdf.xobject.PdfFormXObject;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.List;
 import com.itextpdf.layout.element.ListItem;
@@ -10,10 +16,14 @@ import com.itextpdf.layout.properties.TextAlignment;
 import com.vincent.msyep.common.exception.ResourceNotFoundException;
 import com.vincent.msyep.modules.center.Center;
 import com.vincent.msyep.modules.center.CenterRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -21,6 +31,12 @@ import java.util.ArrayList;
 /** Center resource-person requests: save, fetch, and render the request letter. */
 @Service
 public class ResourcePersonService {
+
+    private static final Logger log = LoggerFactory.getLogger(ResourcePersonService.class);
+    private static final String LETTERHEAD = "cba-letterhead.pdf";
+    /** Letterhead header band height (logos + ISO line + organizer phone) and footer band (addresses). */
+    private static final float HEADER_H = 156f;
+    private static final float FOOTER_H = 66f;
 
     private final ResourcePersonRepository repo;
     private final CenterRepository centers;
@@ -54,11 +70,18 @@ public class ResourcePersonService {
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (PdfWriter writer = new PdfWriter(out);
-             PdfDocument pdf = new PdfDocument(writer);
-             Document doc = new Document(pdf)) {
+             PdfDocument pdf = new PdfDocument(writer)) {
 
-            doc.add(new Paragraph("KP-MSYEP").setBold().setFontSize(16).setTextAlignment(TextAlignment.CENTER));
-            doc.add(new Paragraph("Resource Person Requisition Letter").setFontSize(12)
+            // Print the letter on the YKTK letterhead: the full letterhead page (header + grey arc +
+            // footer) is drawn as the background of every page, and the body flows between them.
+            boolean framed = applyLetterhead(pdf);
+
+            try (Document doc = new Document(pdf)) {
+                doc.setFont(com.itextpdf.kernel.font.PdfFontFactory.createFont(
+                        com.itextpdf.io.font.constants.StandardFonts.TIMES_ROMAN));
+                if (framed) doc.setMargins(HEADER_H + 12, 45, FOOTER_H + 12, 45);
+
+            doc.add(new Paragraph("Resource Person Requisition Letter").setBold().setFontSize(13)
                     .setTextAlignment(TextAlignment.CENTER).setMarginBottom(14));
 
             doc.add(new Paragraph("Date: " + LocalDate.now()).setFontSize(10));
@@ -87,14 +110,37 @@ public class ResourcePersonService {
             }
             doc.add(list);
 
-            doc.add(new Paragraph("\nWe look forward to your kind cooperation.\n\nYours sincerely,\n"
-                    + centerName).setFontSize(10).setMarginTop(8));
-            doc.add(new Paragraph("\n(Draft format — to be finalised.)")
-                    .setItalic().setFontSize(8));
+            doc.add(new Paragraph("We look forward to your kind cooperation.").setFontSize(10).setMarginTop(8));
+            // Leave blank space above the sign-off for a physical signature.
+            doc.add(new Paragraph("Yours sincerely,").setFontSize(10).setMarginTop(48));
+            doc.add(new Paragraph(centerName).setFontSize(10).setMarginTop(0));
+            }
         } catch (Exception e) {
             throw new IllegalStateException("Failed to build letter: " + e.getMessage());
         }
         return out.toByteArray();
+    }
+
+    /**
+     * Draw the full YKTK letterhead page as the background of every page. Returns true when the
+     * letterhead was applied (so the caller can reserve top/bottom margins for it).
+     */
+    private boolean applyLetterhead(PdfDocument pdf) {
+        PdfFormXObject letterhead;
+        try (InputStream in = new ClassPathResource(LETTERHEAD).getInputStream();
+             PdfDocument lh = new PdfDocument(new PdfReader(in))) {
+            letterhead = lh.getPage(1).copyAsFormXObject(pdf);
+        } catch (Exception e) {
+            log.warn("resource-person letterhead missing: {}", e.getMessage());
+            return false;
+        }
+        pdf.addEventHandler(PdfDocumentEvent.END_PAGE, event -> {
+            PdfPage page = ((PdfDocumentEvent) event).getPage();
+            Rectangle ps = page.getPageSize();
+            PdfCanvas canvas = new PdfCanvas(page.newContentStreamBefore(), page.getResources(), pdf);
+            canvas.addXObjectFittedIntoRectangle(letterhead, new Rectangle(0, 0, ps.getWidth(), ps.getHeight()));
+        });
+        return true;
     }
 
     private static String nz(String s) {

@@ -9,7 +9,12 @@
   background: #e7f3ec; padding: 8px 12px; border-radius: 8px; }
 .tab { padding: 18px 4px 4px; }
 .sub { color: #0E5132; margin: 14px 0 8px; }
+.sub .req { color: #c0392b; font-size: 11px; font-weight: 600; }
+.sub .opt { color: #999; font-size: 11px; font-weight: 400; }
 .hint { color: #888; font-size: 13px; }
+.otp-note { display: flex; align-items: center; gap: 6px; color: #4b5b52; font-size: 13px;
+  background: #eef5f0; border: 1px solid #d7e7dd; border-radius: 8px; padding: 8px 12px; }
+.otp-note .hint-i { font-size: 18px; height: 18px; width: 18px; color: #1E7A46; }
 .row { display: flex; gap: 12px; flex-wrap: wrap; }
 .row mat-form-field { flex: 1; min-width: 200px; } .row .wide { flex: 1 1 100%; }
 .chks { display: flex; flex-wrap: wrap; gap: 8px 22px; }

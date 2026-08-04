@@ -13,7 +13,9 @@ import { DataService } from '../../core/data.service';
 import { Center, Role, Zone } from '../../core/models';
 import { SearchSelectComponent } from '../../shared/search-select.component';
 
-const ROLES: Role[] = ['ADMIN', 'ZONE', 'CENTER', 'STAFF', 'FINANCE', 'STUDENT'];
+// Students are created via Create Student / self-registration and sign in with OTP only —
+// so no password-based STUDENT login can be created from the Logins page.
+const ROLES: Role[] = ['ADMIN', 'ZONE', 'CENTER', 'STAFF', 'FINANCE'];
 
 @Component({
   selector: 'app-users',

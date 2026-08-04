@@ -89,6 +89,16 @@ public class StudentController {
 
     public record DocsRequest(List<String> studentIds, String docType) {}
 
+    /** ZIP of the selected students' documents (by type) + each student's Resume PDF. */
+    @PostMapping("/documents-zip")
+    public ResponseEntity<ByteArrayResource> documentsZip(@RequestBody DocsRequest req) {
+        byte[] zip = export.documentsZip(req.studentIds(), req.docType());
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=student-documents.zip")
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .body(new ByteArrayResource(zip));
+    }
+
     @GetMapping
     public ApiResponse<List<Student>> list(@RequestParam(required = false) String centerId,
                                            @AuthenticationPrincipal MsyepPrincipal principal) {
@@ -114,13 +124,31 @@ public class StudentController {
             @PathVariable String id,
             @RequestParam("type") String type,
             @RequestParam(value = "label", required = false) String label,
-            @RequestParam("file") MultipartFile file) {
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal MsyepPrincipal p) {
+        if (p != null && "STUDENT".equals(p.role()) && !id.equals(p.studentId())) {
+            throw new org.springframework.security.access.AccessDeniedException(
+                    "You can only upload to your own profile");
+        }
         return ApiResponse.ok("Document uploaded", service.attachDocument(id, type, label, file));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','ZONE','CENTER')")
-    public ApiResponse<Student> update(@PathVariable String id, @RequestBody Student student) {
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','ZONE','CENTER','STUDENT')")
+    public ApiResponse<Student> update(@PathVariable String id, @RequestBody Student student,
+                                       @AuthenticationPrincipal MsyepPrincipal p) {
+        if (p != null && "STUDENT".equals(p.role())) {
+            if (!id.equals(p.studentId())) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "You can only update your own profile");
+            }
+            // Students can't move themselves between zones/centers or change their allotment codes.
+            service.findById(id); // 404 if missing
+            student.setZoneId(null);
+            student.setCenterId(null);
+            student.setRegisterNo(null);
+            student.setBatchCode(null);
+        }
         return ApiResponse.ok("Student updated", service.update(id, student));
     }
 

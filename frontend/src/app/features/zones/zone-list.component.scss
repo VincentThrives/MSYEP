@@ -15,10 +15,17 @@
     .chk { margin: 8px 0; } .flags { display: flex; gap: 18px; flex-wrap: wrap; margin: 6px 0 10px; }
     .docs { display: grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap: 14px; }
     .doc { border: 1px solid #eee; border-radius: 10px; padding: 12px; }
-    .doc-label { font-size: 13px; color: #444; margin-bottom: 8px; }
+    .doc.req { border-color: #e6d59a; background: #fffdf5; }
+    .doc.missing { border-color: #e6d59a; }
+    .doc-label { font-size: 13px; color: #444; margin-bottom: 8px; display: flex; align-items: center; gap: 4px; }
+    .doc-label .reco { color: #C9A227; font-size: 15px; width: 15px; height: 15px; }
     .doc-pick { display: flex; align-items: center; gap: 10px; }
+    .doc-pick .ok { color: #1E7A46; font-size: 18px; width: 18px; height: 18px; }
     .doc-name { font-size: 12px; color: #999; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .doc-name.has { color: #1E7A46; font-weight: 600; }
+    .req-hint { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #8a6d1a;
+      background: #fffaf0; border: 1px solid #f0e0b0; border-radius: 8px; padding: 8px 12px; margin: 4px 0 12px; }
+    .req-hint mat-icon { font-size: 17px; width: 17px; height: 17px; }
     .tiers { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 14px; margin-bottom: 12px; }
     .tier { border: 2px solid #e6e6e6; border-radius: 14px; padding: 18px; text-align: center; cursor: pointer;
       transition: .12s; position: relative; }
@@ -26,7 +33,12 @@
     .tier.sel { border-color: #1E7A46; background: #f3faf5; }
     .tier-name { font-weight: 800; color: #0E5132; letter-spacing: 1px; }
     .tier-amt { font-size: 22px; font-weight: 700; margin-top: 6px; }
-    .tier mat-icon { position: absolute; top: 8px; right: 8px; color: #1E7A46; }
+    .tier-terr { display: inline-flex; align-items: center; gap: 3px; margin-top: 8px;
+      font-size: 12px; font-weight: 600; color: #0E5132; background: #eef7f1;
+      border-radius: 999px; padding: 3px 10px; }
+    .tier-terr mat-icon { position: static; top: auto; right: auto; font-size: 15px;
+      width: 15px; height: 15px; color: #1E7A46; }
+    .tier > mat-icon { position: absolute; top: 8px; right: 8px; color: #1E7A46; }
     .terms-box { max-height: 320px; overflow-y: auto; border: 1px solid #e6e6e6; border-radius: 10px;
       padding: 16px; margin: 12px 0; background: #fcfcfb; }
     .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }

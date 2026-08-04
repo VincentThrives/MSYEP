@@ -34,15 +34,58 @@ public class StudentExportService {
     private final MongoTemplate mongo;
     private final StudentRepository students;
     private final CenterRepository centers;
+    private final com.vincent.msyep.modules.cv.CvService cvService;
     private final String uploadsDir;
 
     public StudentExportService(MongoTemplate mongo, StudentRepository students,
                                 CenterRepository centers,
+                                com.vincent.msyep.modules.cv.CvService cvService,
                                 @Value("${app.uploads-dir:uploads}") String uploadsDir) {
         this.mongo = mongo;
         this.students = students;
         this.centers = centers;
+        this.cvService = cvService;
         this.uploadsDir = uploadsDir;
+    }
+
+    /** ZIP of the selected students' document files (filtered by type) + each student's Resume PDF. */
+    public byte[] documentsZip(List<String> studentIds, String docType) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (java.util.zip.ZipOutputStream zip = new java.util.zip.ZipOutputStream(out)) {
+            for (String id : studentIds) {
+                Student s = students.findById(id).orElse(null);
+                if (s == null) continue;
+                String folder = safeName(nz(s.getName()) + "_" + nz(s.getRegisterNo())) + "/";
+                for (var d : s.getDocuments()) {
+                    if (StringUtils.hasText(docType) && !"All".equalsIgnoreCase(docType)
+                            && !docType.equals(d.getType())) continue;
+                    Path p = Paths.get(uploadsDir).resolve(d.getPath().replace("uploads/", ""));
+                    if (!Files.exists(p)) continue;
+                    String fname = p.getFileName().toString();
+                    String ext = fname.contains(".") ? fname.substring(fname.lastIndexOf('.')) : "";
+                    try {
+                        zip.putNextEntry(new java.util.zip.ZipEntry(folder + safeName(nz(d.getLabel())) + ext));
+                        zip.write(Files.readAllBytes(p));
+                        zip.closeEntry();
+                    } catch (Exception ignored) { /* skip unreadable file */ }
+                }
+                // Always include the resume/CV (built without the payment gate — admin export).
+                try {
+                    byte[] cv = cvService.buildCv(id, false);
+                    zip.putNextEntry(new java.util.zip.ZipEntry(folder + "Resume.pdf"));
+                    zip.write(cv);
+                    zip.closeEntry();
+                } catch (Exception ignored) { /* CV skipped if profile incomplete */ }
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to build documents ZIP: " + e.getMessage());
+        }
+        return out.toByteArray();
+    }
+
+    private static String safeName(String s) {
+        String t = s == null ? "" : s.trim().replaceAll("[^a-zA-Z0-9._-]+", "_");
+        return t.isEmpty() ? "student" : t;
     }
 
     /** Filtered student query for the View Students / Download pages. */

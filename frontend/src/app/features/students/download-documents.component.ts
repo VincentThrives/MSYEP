@@ -94,12 +94,13 @@ export class DownloadDocumentsComponent implements AfterViewInit {
       return;
     }
     this.busy.set(true);
-    this.data.studentDocumentsPdf([...this.selected], this.docType).subscribe({
+    // A ZIP with each student's document files (by type) + their Resume PDF.
+    this.data.studentDocumentsZip([...this.selected], this.docType).subscribe({
       next: (blob) => {
         this.busy.set(false);
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url; a.download = 'student-documents.pdf'; a.click();
+        a.href = url; a.download = 'student-documents.zip'; a.click();
         URL.revokeObjectURL(url);
       },
       error: (e) => {

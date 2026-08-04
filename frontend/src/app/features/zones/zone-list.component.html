@@ -18,6 +18,15 @@
         <div><span class="k">Status</span><span class="v badge">{{ r.status }}</span></div>
       </div>
       <div class="reg-note"><mat-icon>info</mat-icon> {{ r.note }}</div>
+      <div class="reg-downloads">
+        <span class="dl-label">Franchise documents:</span>
+        <button mat-flat-button color="primary" [disabled]="downloading()" (click)="downloadCertificate(r.zone.id!)">
+          <mat-icon>workspace_premium</mat-icon> Download Certificate
+        </button>
+        <button mat-stroked-button [disabled]="downloading()" (click)="downloadMou(r.zone.id!)">
+          <mat-icon>description</mat-icon> Download MOU
+        </button>
+      </div>
     </div>
 
     <div class="form-panel" *ngIf="editing()">
@@ -150,15 +159,20 @@
                 <input matInput [(ngModel)]="form.bankAccountDetails" placeholder="A/c no · IFSC · Bank · Branch" /></mat-form-field>
             </div>
             <h4 class="sub">Upload documents (photos / copies, max 2 MB each)</h4>
+            <p class="req-hint"><mat-icon>info</mat-icon>
+              Add the <b>Organization Logo</b> and <b>Franchisee Signature</b> — they brand the franchise
+              certificate &amp; every page of the MOU. (You can also add them later.)</p>
             <div class="docs">
-              <div class="doc" *ngFor="let slot of docSlots">
-                <div class="doc-label">{{ slot.label }}</div>
+              <div class="doc" *ngFor="let slot of docSlots"
+                [class.req]="isRequiredDoc(slot.type)" [class.missing]="isRequiredDoc(slot.type) && !hasDoc(slot.type)">
+                <div class="doc-label">{{ slot.label }}<mat-icon class="reco" *ngIf="isRequiredDoc(slot.type)" matTooltip="Recommended — brands the certificate &amp; MOU">star</mat-icon></div>
                 <div class="doc-pick">
                   <button mat-stroked-button type="button" (click)="picker.click()">
                     <mat-icon>image</mat-icon> Choose file</button>
                   <input #picker type="file" hidden accept="image/*,.pdf" (change)="onFile(slot.type, $event)" />
-                  <span class="doc-name" [class.has]="selectedName(slot.type)">
+                  <span class="doc-name" [class.has]="hasDoc(slot.type)">
                     {{ selectedName(slot.type) || existingDocName(slot.type) || 'No file chosen' }}</span>
+                  <mat-icon class="ok" *ngIf="isRequiredDoc(slot.type) && hasDoc(slot.type)">check_circle</mat-icon>
                 </div>
               </div>
             </div>
@@ -192,7 +206,37 @@
           </div>
         </mat-tab>
 
-        <!-- 5: Membership & Submit -->
+        <!-- 5: Franchise Certificate -->
+        <mat-tab>
+          <ng-template mat-tab-label><span class="wz-tl" [class.done]="isComplete('certificate')">Franchise Certificate
+            <mat-icon *ngIf="isComplete('certificate')">check_circle</mat-icon>
+            <span *ngIf="!isComplete('certificate')" class="pct">{{ progress('certificate') }}%</span></span></ng-template>
+          <div class="tab">
+            <div class="sec-progress" [class.done]="isComplete('certificate')">
+              <div class="wz-bar"><div class="wz-fill" [style.width.%]="progress('certificate')"></div></div>
+              <span class="lbl">{{ progress('certificate') }}% complete</span>
+            </div>
+            <p class="hint">These details are printed on the Franchise Certificate and the MOU.
+              Upload the franchise logo (KYC &amp; Documents → Organization Logo) and the Franchisee Signature there too.</p>
+            <div class="row">
+              <mat-form-field appearance="outline"><mat-label>Franchisee / Trade Name</mat-label>
+                <input matInput [(ngModel)]="form.franchiseeName"
+                  placeholder="e.g. Harsha Computer Education" /></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Registration No.</mat-label>
+                <input matInput [(ngModel)]="form.registrationNo" /></mat-form-field>
+            </div>
+            <div class="row">
+              <mat-form-field appearance="outline"><mat-label>Issue Date</mat-label>
+                <input matInput type="date" [(ngModel)]="form.issueDate" /></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Valid Till (auto · +2 years)</mat-label>
+                <input matInput [value]="validTillPreview() || '—'" readonly /></mat-form-field>
+              <mat-form-field appearance="outline"><mat-label>Territory (from tier)</mat-label>
+                <input matInput [value]="territoryPreview() || 'Select a tier'" readonly /></mat-form-field>
+            </div>
+          </div>
+        </mat-tab>
+
+        <!-- 6: Membership & Submit -->
         <mat-tab>
           <ng-template mat-tab-label><span class="wz-tl" [class.done]="isComplete('membership')">Membership &amp; Submit
             <mat-icon *ngIf="isComplete('membership')">check_circle</mat-icon>
@@ -208,6 +252,7 @@
                 (click)="form.membershipTier = t.name">
                 <div class="tier-name">{{ t.name }}</div>
                 <div class="tier-amt">₹{{ t.amount | number }}</div>
+                <div class="tier-terr"><mat-icon>place</mat-icon>{{ territoryFor(t.name) }}</div>
                 <mat-icon *ngIf="form.membershipTier === t.name">check_circle</mat-icon>
               </div>
             </div>
@@ -278,8 +323,20 @@
       <ng-container matColumnDef="actions">
         <th mat-header-cell *matHeaderCellDef>Actions</th>
         <td mat-cell *matCellDef="let z">
-          <button mat-icon-button (click)="edit(z)"><mat-icon>edit</mat-icon></button>
-          <button mat-icon-button color="warn" (click)="remove(z)"><mat-icon>delete</mat-icon></button>
+          <button mat-icon-button (click)="edit(z)" matTooltip="Edit"><mat-icon>edit</mat-icon></button>
+          <button mat-icon-button color="primary" [disabled]="downloading()"
+            (click)="downloadCertificate(z.id)" matTooltip="Download Certificate">
+            <mat-icon>workspace_premium</mat-icon>
+          </button>
+          <button mat-icon-button [disabled]="downloading()"
+            (click)="downloadMou(z.id)" matTooltip="Download MOU">
+            <mat-icon>description</mat-icon>
+          </button>
+          <button mat-icon-button [disabled]="downloading()"
+            (click)="emailDocuments(z)" matTooltip="Email both to franchise">
+            <mat-icon>mail</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" (click)="remove(z)" matTooltip="Delete"><mat-icon>delete</mat-icon></button>
         </td>
       </ng-container>
       <tr mat-header-row *matHeaderRowDef="cols"></tr>

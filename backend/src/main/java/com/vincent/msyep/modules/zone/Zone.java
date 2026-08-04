@@ -85,6 +85,18 @@ public class Zone {
     private String membershipTier;           // Silver / Gold / Platinum / Diamond
     private Integer membershipAmount;        // 50000 / 75000 / 100000 / 125000
     private boolean tcAccepted;
+
+    // ----- Franchise certificate / MOU -----
+    /** Trade / franchisee name printed on the certificate + letterhead (replaces the template sample). */
+    private String franchiseeName;
+    /** Registration number shown on the franchise certificate. */
+    private String registrationNo;
+    /** Certificate issue date (ISO yyyy-MM-dd) — the "from" date. */
+    private String issueDate;
+    /** Valid till — computed as issueDate + 2 years (ISO yyyy-MM-dd). Not user-editable. */
+    private String validTill;
+    /** Territory granted, derived from the membership tier (Hobli / Taluk / 3 Taluks / District). */
+    private String territory;
     /** PENDING | ACTIVE. */
     @Builder.Default
     private String status = "PENDING";

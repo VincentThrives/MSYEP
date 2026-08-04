@@ -17,10 +17,28 @@
       <span>GP email auto-loaded: <strong>{{ gpEmail() || '— not mapped —' }}</strong></span>
     </div>
 
+    <div class="mail-picker">
+      <app-multi-search-select label="Gram Panchayat Mails" [options]="mailOptions()"
+        valueKey="email" labelKey="label" [(value)]="selectedMails"></app-multi-search-select>
+      <button mat-flat-button color="primary"
+        [disabled]="!selectedIds().length || !selectedMails().length" (click)="sendToSelectedMails()">
+        <mat-icon>send</mat-icon>
+        Send to selected mail ID(s)
+      </button>
+      <button mat-stroked-button [disabled]="!filter.gramPanchayat" (click)="downloadGpBlueprint()"
+        matTooltip="Cover + Kannada requisition letter + invoice for this GP">
+        <mat-icon>picture_as_pdf</mat-icon>
+        GP Blue Print
+      </button>
+      <span class="hint" *ngIf="!gpMails().length">
+        No mail IDs yet — add them under <strong>Finance → Mail</strong>.
+      </span>
+    </div>
+
     <div class="bulk" *ngIf="selectedIds().length">
-      {{ selectedIds().length }} selected
+      {{ selectedIds().length }} student(s) selected
       <button mat-flat-button color="primary" (click)="sendBulk()">
-        <mat-icon>send</mat-icon> Send mail to GP for selected
+        <mat-icon>send</mat-icon> Send mail to auto-mapped GP
       </button>
     </div>
 

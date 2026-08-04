@@ -56,14 +56,10 @@
           <mat-form-field appearance="outline"><mat-label>Mobile No</mat-label>
             <input matInput [(ngModel)]="form.phone" /></mat-form-field>
         </div>
-        <div class="row">
-          <mat-form-field appearance="outline"><mat-label>User ID</mat-label>
-            <mat-icon matPrefix>badge</mat-icon>
-            <input matInput [(ngModel)]="form.userId" autocomplete="off" [disabled]="!!form.id" /></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Password</mat-label>
-            <mat-icon matPrefix>lock</mat-icon>
-            <input matInput type="password" [(ngModel)]="form.password" autocomplete="new-password" [disabled]="!!form.id" /></mat-form-field>
-        </div>
+        <!-- Students always sign in with a mobile OTP — no User ID / Password is set. -->
+        <p class="otp-note"><mat-icon class="hint-i">sms</mat-icon>
+          {{ isStudent ? 'You sign in' : 'The student signs in' }} with a one-time password (OTP) sent to the
+          registered mobile — no password is required.</p>
         <div class="tab-nav">
           <span></span>
           <button mat-flat-button color="primary" (click)="goTo(1)">Next: Personal Details <mat-icon>arrow_forward</mat-icon></button>
@@ -89,18 +85,22 @@
           <mat-form-field appearance="outline"><mat-label>Date of Birth</mat-label>
             <input matInput type="date" [(ngModel)]="form.dateOfBirth" /></mat-form-field>
           <app-search-select label="Caste" [options]="castes" [(value)]="form.caste" (valueChange)="onFormActivity()"></app-search-select>
+          <mat-form-field appearance="outline"><mat-label>Father Name</mat-label>
+            <input matInput [(ngModel)]="form.fatherName" (ngModelChange)="onFormActivity()" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Mother Name</mat-label>
+            <input matInput [(ngModel)]="form.motherName" (ngModelChange)="onFormActivity()" /></mat-form-field>
         </div>
         <div class="tab-nav">
           <button mat-stroked-button (click)="goTo(0)"><mat-icon>arrow_back</mat-icon> Back</button>
-          <button mat-flat-button color="primary" (click)="goTo(2)">Next: Education &amp; Job <mat-icon>arrow_forward</mat-icon></button>
+          <button mat-flat-button color="primary" (click)="goTo(2)">Next: Education <mat-icon>arrow_forward</mat-icon></button>
         </div>
       </div>
     </mat-tab>
 
-    <!-- 3: Education & Job -->
+    <!-- 3: Education -->
     <mat-tab>
       <ng-template mat-tab-label>
-        <span class="tl" [class.done]="isComplete('education')">Education &amp; Job
+        <span class="tl" [class.done]="isComplete('education')">Education
           <mat-icon *ngIf="isComplete('education')">check_circle</mat-icon>
           <span *ngIf="!isComplete('education')" class="pct">{{ progress('education') }}%</span>
         </span>
@@ -110,17 +110,80 @@
           <div class="bar"><div class="fill" [style.width.%]="progress('education')"></div></div>
           <span class="lbl">{{ progress('education') }}% complete</span>
         </div>
+
+        <h4 class="sub">SSLC / 10th <span class="req">* required</span></h4>
+        <div class="row">
+          <mat-form-field appearance="outline"><mat-label>School Studied</mat-label>
+            <input matInput [(ngModel)]="form.sslcSchool" (ngModelChange)="onFormActivity()" /></mat-form-field>
+          <app-search-select label="Percentage / CGPA" [options]="markTypes"
+            [(value)]="form.sslcMarkType" (valueChange)="onFormActivity()"></app-search-select>
+          <mat-form-field appearance="outline"><mat-label>{{ form.sslcMarkType || 'Percentage / CGPA' }} value</mat-label>
+            <input matInput [(ngModel)]="form.sslcPercent" (ngModelChange)="onFormActivity()" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Year of Passing</mat-label>
+            <input matInput [(ngModel)]="form.sslcYear" (ngModelChange)="onFormActivity()" /></mat-form-field>
+        </div>
+
+        <h4 class="sub">PU / Diploma <span class="opt">(optional)</span></h4>
+        <div class="row">
+          <mat-form-field appearance="outline"><mat-label>College / School Studied</mat-label>
+            <input matInput [(ngModel)]="form.puSchool" /></mat-form-field>
+          <app-search-select label="Percentage / CGPA" [options]="markTypes"
+            [(value)]="form.puMarkType"></app-search-select>
+          <mat-form-field appearance="outline"><mat-label>{{ form.puMarkType || 'Percentage / CGPA' }} value</mat-label>
+            <input matInput [(ngModel)]="form.puPercent" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Year of Passing</mat-label>
+            <input matInput [(ngModel)]="form.puYear" /></mat-form-field>
+        </div>
+        <div class="row">
+          <mat-form-field appearance="outline" class="wide"><mat-label>Stream / Course (PU / Diploma)</mat-label>
+            <input matInput [(ngModel)]="form.puStream" /></mat-form-field>
+        </div>
+
+        <h4 class="sub">Degree <span class="opt">(optional)</span></h4>
+        <div class="row">
+          <mat-form-field appearance="outline"><mat-label>College Studied</mat-label>
+            <input matInput [(ngModel)]="form.degreeCollege" /></mat-form-field>
+          <app-search-select label="Percentage / CGPA" [options]="markTypes"
+            [(value)]="form.degreeMarkType"></app-search-select>
+          <mat-form-field appearance="outline"><mat-label>{{ form.degreeMarkType || 'Percentage / CGPA' }} value</mat-label>
+            <input matInput [(ngModel)]="form.degreePercent" /></mat-form-field>
+          <mat-form-field appearance="outline"><mat-label>Year of Passing</mat-label>
+            <input matInput [(ngModel)]="form.degreeYear" /></mat-form-field>
+        </div>
+        <div class="row">
+          <mat-form-field appearance="outline" class="wide"><mat-label>Course / Stream (Degree)</mat-label>
+            <input matInput [(ngModel)]="form.degreeStream" /></mat-form-field>
+        </div>
+
+        <div class="tab-nav">
+          <button mat-stroked-button (click)="goTo(1)"><mat-icon>arrow_back</mat-icon> Back</button>
+          <button mat-flat-button color="primary" (click)="goTo(3)">Next: Job <mat-icon>arrow_forward</mat-icon></button>
+        </div>
+      </div>
+    </mat-tab>
+
+    <!-- 4: Job -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <span class="tl" [class.done]="isComplete('job')">Job
+          <mat-icon *ngIf="isComplete('job')">check_circle</mat-icon>
+          <span *ngIf="!isComplete('job')" class="pct">{{ progress('job') }}%</span>
+        </span>
+      </ng-template>
+      <div class="tab" [class.complete]="isComplete('job')">
+        <div class="sec-progress" [class.done]="isComplete('job')">
+          <div class="bar"><div class="fill" [style.width.%]="progress('job')"></div></div>
+          <span class="lbl">{{ progress('job') }}% complete</span>
+        </div>
         <div class="row">
           <mat-form-field appearance="outline"><mat-label>Educational Qualification (Current Class)</mat-label>
             <input matInput [(ngModel)]="form.educationalQualification" /></mat-form-field>
-          <mat-form-field appearance="outline"><mat-label>Latest Admission Year</mat-label>
-            <input matInput type="date" [(ngModel)]="form.admissionYear" /></mat-form-field>
           <app-search-select label="Interested for Internship?" [options]="yesNo"
             [(value)]="form.interestedInternship" (valueChange)="onFormActivity()"></app-search-select>
         </div>
         <div class="row">
           <mat-form-field appearance="outline" class="wide"><mat-label>Technical Skills (comma separated)</mat-label>
-            <input matInput [(ngModel)]="form.technicalSkills" /></mat-form-field>
+            <input matInput [(ngModel)]="form.technicalSkills" (ngModelChange)="onFormActivity()" /></mat-form-field>
         </div>
         <h4 class="sub">Hobbies</h4>
         <div class="chks">
@@ -137,11 +200,11 @@
         </div>
         <div class="row">
           <mat-form-field appearance="outline" class="wide"><mat-label>Career Goal</mat-label>
-            <textarea matInput rows="2" [(ngModel)]="form.careerGoal"></textarea></mat-form-field>
+            <textarea matInput rows="2" [(ngModel)]="form.careerGoal" (ngModelChange)="onFormActivity()"></textarea></mat-form-field>
         </div>
         <div class="tab-nav">
-          <button mat-stroked-button (click)="goTo(1)"><mat-icon>arrow_back</mat-icon> Back</button>
-          <button mat-flat-button color="primary" (click)="goTo(3)">Next: Address <mat-icon>arrow_forward</mat-icon></button>
+          <button mat-stroked-button (click)="goTo(2)"><mat-icon>arrow_back</mat-icon> Back</button>
+          <button mat-flat-button color="primary" (click)="goTo(4)">Next: Address <mat-icon>arrow_forward</mat-icon></button>
         </div>
       </div>
     </mat-tab>
@@ -186,8 +249,8 @@
             <textarea matInput rows="2" [(ngModel)]="form.postalAddress"></textarea></mat-form-field>
         </div>
         <div class="tab-nav">
-          <button mat-stroked-button (click)="goTo(2)"><mat-icon>arrow_back</mat-icon> Back</button>
-          <button mat-flat-button color="primary" (click)="goTo(4)">Next: MSYEP Allotments <mat-icon>arrow_forward</mat-icon></button>
+          <button mat-stroked-button (click)="goTo(3)"><mat-icon>arrow_back</mat-icon> Back</button>
+          <button mat-flat-button color="primary" (click)="goTo(5)">Next: MSYEP Allotments <mat-icon>arrow_forward</mat-icon></button>
         </div>
       </div>
     </mat-tab>
@@ -218,8 +281,8 @@
             labelKey="name" [(value)]="form.collegeName" (valueChange)="onFormActivity()"></app-search-select>
         </div>
         <div class="tab-nav">
-          <button mat-stroked-button (click)="goTo(3)"><mat-icon>arrow_back</mat-icon> Back</button>
-          <button mat-flat-button color="primary" (click)="goTo(5)">Next: Documents <mat-icon>arrow_forward</mat-icon></button>
+          <button mat-stroked-button (click)="goTo(4)"><mat-icon>arrow_back</mat-icon> Back</button>
+          <button mat-flat-button color="primary" (click)="goTo(6)">Next: Documents <mat-icon>arrow_forward</mat-icon></button>
         </div>
       </div>
     </mat-tab>
@@ -251,7 +314,7 @@
           </div>
         </div>
         <div class="tab-nav">
-          <button mat-stroked-button (click)="goTo(4)"><mat-icon>arrow_back</mat-icon> Back</button>
+          <button mat-stroked-button (click)="goTo(5)"><mat-icon>arrow_back</mat-icon> Back</button>
           <span></span>
         </div>
       </div>

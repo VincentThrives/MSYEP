@@ -40,7 +40,12 @@ export class ResourcePersonComponent {
   centers = signal<Center[]>([]);
   selectedCenterId = signal<string | undefined>(undefined);
   centersForPicker(): Center[] {
-    return this.isAdmin ? this.centers().filter((c) => c.zoneId === this.selectedZoneId()) : this.centers();
+    if (!this.isAdmin) return this.centers();
+    const zid = this.selectedZoneId();
+    if (!zid) return [];
+    // Show centers linked to the chosen zone, plus any not yet linked to a zone,
+    // so legacy/unassigned centers stay reachable instead of a dead-end empty list.
+    return this.centers().filter((c) => c.zoneId === zid || !c.zoneId);
   }
   get ready(): boolean {
     return this.isCenter || !!this.selectedCenterId();

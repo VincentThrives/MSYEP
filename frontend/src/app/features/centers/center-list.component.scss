@@ -24,8 +24,11 @@
     .docs { display: grid; grid-template-columns: repeat(auto-fit,minmax(300px,1fr)); gap: 14px; }
     .docs.two { grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); margin-top: 8px; }
     .doc { border: 1px solid #eee; border-radius: 10px; padding: 12px; }
+    .doc.missing { border-color: #d08a00; background: #fffaf0; }
     .doc-label { font-size: 13px; color: #444; margin-bottom: 8px; min-height: 34px; }
+    .doc-label .req { color: #c0392b; font-weight: 800; }
     .doc-pick { display: flex; align-items: center; gap: 10px; }
+    .doc-pick .ok { color: #1E7A46; font-size: 18px; width: 18px; height: 18px; }
     .doc-name { font-size: 12px; color: #999; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .doc-name.has { color: #1E7A46; font-weight: 600; }
     .mono { font-family: monospace; } .small { font-size: 12px; color: #555; }

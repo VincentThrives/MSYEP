@@ -7,6 +7,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { DataService } from '../../core/data.service';
 import { AuthService } from '../../core/auth.service';
@@ -20,7 +21,7 @@ interface PersonField { key: string; label: string; question?: boolean; opinion?
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatButtonModule, MatIconModule, MatSnackBarModule, SearchSelectComponent,
+    MatButtonModule, MatIconModule, MatSnackBarModule, MatTooltipModule, SearchSelectComponent,
   ],
   templateUrl: './sow.component.html',
   styleUrl: './sow.component.scss',
@@ -40,7 +41,12 @@ export class SowComponent {
   selectedCenterId = signal<string | undefined>(undefined);
   /** Admin: centers of the chosen zone; Zone: its own centers (already scoped). */
   centersForPicker(): Center[] {
-    return this.isAdmin ? this.centers().filter((c) => c.zoneId === this.selectedZoneId()) : this.centers();
+    if (!this.isAdmin) return this.centers();
+    const zid = this.selectedZoneId();
+    if (!zid) return [];
+    // Show centers linked to the chosen zone, plus any not yet linked to a zone,
+    // so legacy/unassigned centers stay reachable instead of a dead-end empty list.
+    return this.centers().filter((c) => c.zoneId === zid || !c.zoneId);
   }
   private centerId(): string | undefined {
     return this.isCenter ? undefined : this.selectedCenterId();
@@ -200,6 +206,24 @@ export class SowComponent {
           },
           error: (e) => this.fail(e),
         });
+      },
+      error: (e) => this.fail(e),
+    });
+  }
+
+  /** Download all saved SOW program files as a single ZIP. */
+  downloadAll(): void {
+    this.saving.set(true);
+    this.data.sowDownloadAll(this.centerId()).subscribe({
+      next: (blob) => {
+        this.saving.set(false);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'KP-MSYEP-SOW-Programs.zip';
+        a.click();
+        URL.revokeObjectURL(url);
+        this.snack.open('Downloaded all saved SOW program files (ZIP).', 'OK', { duration: 3500 });
       },
       error: (e) => this.fail(e),
     });

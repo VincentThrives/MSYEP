@@ -39,6 +39,8 @@ public class Student {
     private String gender;
     private String dateOfBirth;
     private String caste;
+    private String fatherName;
+    private String motherName;
 
     // ----- Education & job details -----
     private String educationalQualification;
@@ -50,6 +52,23 @@ public class Student {
     @Builder.Default
     private List<String> interestedCourses = new ArrayList<>();
     private String careerGoal;
+
+    // Structured education — SSLC/10th (mandatory), PU/Diploma, Degree (optional)
+    // markType = "Percentage" | "CGPA"; the value is stored in the matching *Percent field.
+    private String sslcSchool;
+    private String sslcMarkType;
+    private String sslcPercent;
+    private String sslcYear;
+    private String puSchool;
+    private String puMarkType;
+    private String puPercent;
+    private String puYear;
+    private String puStream;
+    private String degreeCollege;
+    private String degreeMarkType;
+    private String degreePercent;
+    private String degreeYear;
+    private String degreeStream;
 
     @Indexed
     private String centerId;

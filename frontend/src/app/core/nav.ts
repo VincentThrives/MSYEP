@@ -29,12 +29,27 @@ const CENTERS_GROUP: NavItem = {
   label: 'Centers', icon: 'school', children: [
     { label: 'Create Center', path: '/app/centers', icon: 'add_home_work', queryParams: { new: 1 } },
     { label: 'View Centers', path: '/app/centers', icon: 'list_alt' },
+    { label: 'Center Map', path: '/app/center-map', icon: 'map' },
   ],
 };
 const STAFF_GROUP: NavItem = {
   label: 'Staff Management', icon: 'badge', children: [
     { label: 'Add Staff', path: '/app/staff', icon: 'person_add', queryParams: { new: 1 } },
     { label: 'View Staff', path: '/app/staff', icon: 'list_alt' },
+  ],
+};
+// Finance wing + the GP-mail management page.
+const FINANCE_GROUP: NavItem = {
+  label: 'Finance', icon: 'account_balance', children: [
+    { label: 'Finance Wing', path: '/app/finance', icon: 'request_quote' },
+    { label: 'Mail', path: '/app/finance-mail', icon: 'mail' },
+  ],
+};
+const STUDENTS_GROUP: NavItem = {
+  label: 'Students', icon: 'groups', children: [
+    { label: 'Create Student', path: '/app/students', icon: 'person_add' },
+    { label: 'View Students', path: '/app/students/view', icon: 'list_alt' },
+    { label: 'Download Documents', path: '/app/students/download-docs', icon: 'download' },
   ],
 };
 
@@ -53,7 +68,8 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'KPMSYEP SOW', path: '/app/sow', icon: 'description' },
   { label: 'Resource Person', path: '/app/resource-persons', icon: 'groups_2' },
   { label: 'Location', path: '/app/location', icon: 'place' },
-  { label: 'Finance', path: '/app/finance', icon: 'account_balance' },
+  FINANCE_GROUP,
+  { label: 'Franchise Settings', path: '/app/franchise-settings', icon: 'draw' },
   { label: 'Logins', path: '/app/users', icon: 'manage_accounts' },
 ];
 
@@ -63,6 +79,7 @@ const ZONE_NAV: NavItem[] = [
     label: 'Center Management', icon: 'school', children: [
       { label: 'Center Create', path: '/app/centers', icon: 'add_home_work', queryParams: { new: 1 } },
       { label: 'Center View', path: '/app/centers', icon: 'list_alt' },
+      { label: 'Center Map', path: '/app/center-map', icon: 'map' },
     ],
   },
   {
@@ -84,6 +101,7 @@ const CENTER_NAV: NavItem[] = [
     label: 'My Center', icon: 'school', children: [
       { label: 'Create Center', path: '/app/centers', icon: 'add_home_work', queryParams: { new: 1 } },
       { label: 'View Center', path: '/app/centers', icon: 'list_alt' },
+      { label: 'Center Map', path: '/app/center-map', icon: 'map' },
     ],
   },
   {
@@ -102,10 +120,11 @@ const STUDENT_NAV: NavItem[] = [
     label: 'My Profile', icon: 'person', children: [
       { label: 'Account', path: '/app/students', icon: 'account_circle', queryParams: { tab: 0 } },
       { label: 'Personal Details', path: '/app/students', icon: 'badge', queryParams: { tab: 1 } },
-      { label: 'Education & Job', path: '/app/students', icon: 'school', queryParams: { tab: 2 } },
-      { label: 'Address', path: '/app/students', icon: 'home', queryParams: { tab: 3 } },
-      { label: 'MSYEP Allotments', path: '/app/students', icon: 'assignment_turned_in', queryParams: { tab: 4 } },
-      { label: 'Documents', path: '/app/students', icon: 'folder', queryParams: { tab: 5 } },
+      { label: 'Education', path: '/app/students', icon: 'school', queryParams: { tab: 2 } },
+      { label: 'Job', path: '/app/students', icon: 'work', queryParams: { tab: 3 } },
+      { label: 'Address', path: '/app/students', icon: 'home', queryParams: { tab: 4 } },
+      { label: 'MSYEP Allotments', path: '/app/students', icon: 'assignment_turned_in', queryParams: { tab: 5 } },
+      { label: 'Documents', path: '/app/students', icon: 'folder', queryParams: { tab: 6 } },
     ],
   },
   { label: 'My Resume / CV', path: '/app/resume', icon: 'description' },
@@ -114,12 +133,18 @@ const STUDENT_NAV: NavItem[] = [
 
 const STAFF_NAV: NavItem[] = [
   { label: 'Dashboard', path: '/app/dashboard', icon: 'dashboard' },
+  ZONES_GROUP,
+  CENTERS_GROUP,
+  STUDENTS_GROUP,
+  { label: 'KPMSYEP SOW', path: '/app/sow', icon: 'description' },
+  { label: 'Resource Person', path: '/app/resource-persons', icon: 'groups_2' },
+  { label: 'Location', path: '/app/location', icon: 'place' },
+  FINANCE_GROUP,
   STAFF_GROUP,
-  { label: 'View Students', path: '/app/students/view', icon: 'list_alt' },
 ];
 
 const FINANCE_NAV: NavItem[] = [
-  { label: 'Finance Wing', path: '/app/finance', icon: 'account_balance' },
+  FINANCE_GROUP,
   {
     label: 'Students', icon: 'groups', children: [
       { label: 'Create Student', path: '/app/students', icon: 'person_add' },

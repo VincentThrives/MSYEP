@@ -47,6 +47,7 @@ export class StudentListComponent {
   yesNo = YES_NO;
   hobbies = HOBBIES;
   catalog = COURSE_CATALOG;
+  markTypes = ['Percentage', 'CGPA'];
   docSlots = STUDENT_DOC_SLOTS;
   year = new Date().getFullYear();
 
@@ -61,12 +62,15 @@ export class StudentListComponent {
   /** Zone/Center are locked to the login's own scope for ZONE / CENTER users. */
   lockZone = false;
   lockCenter = false;
+  /** Students sign in with OTP only — no User ID / Password on their own profile. */
+  isStudent = false;
 
   /** Wizard sections in order — used for progress + auto-advance. */
   readonly sections = [
     { key: 'account', label: 'Account' },
     { key: 'personal', label: 'Personal Details' },
-    { key: 'education', label: 'Education & Job' },
+    { key: 'education', label: 'Education' },
+    { key: 'job', label: 'Job' },
     { key: 'address', label: 'Address' },
     { key: 'allotments', label: 'MSYEP Allotments' },
     { key: 'documents', label: 'Documents' },
@@ -82,10 +86,17 @@ export class StudentListComponent {
     const u = this.auth.user();
     if (role === 'CENTER') { this.lockZone = true; this.lockCenter = true; }
     else if (role === 'ZONE') { this.lockZone = true; }
+    this.isStudent = role === 'STUDENT';
+    // A student edits their OWN record — zone/center are fixed by their allotment.
+    if (this.isStudent) { this.lockZone = true; this.lockCenter = true; }
     this.scopeZoneId = u?.zoneId;
     this.scopeCenterId = u?.centerId;
-    // Create Student opens straight into the form — no listing table here.
-    this.newStudent();
+    // Students land on their own profile (edit); ?edit=<id> loads that record for editing;
+    // otherwise a blank Create form.
+    const editId = this.route.snapshot.queryParamMap.get('edit');
+    if (this.isStudent) this.loadOwnProfile();
+    else if (editId) this.loadForEdit(editId);
+    else this.newStudent();
     // Jump to the section requested from the side nav (?tab=0..5), and follow changes.
     this.route.queryParamMap
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -102,6 +113,43 @@ export class StudentListComponent {
 
   blank(): Student {
     return { name: '', state: 'Karnataka', hobbies: [], interestedCourses: [] };
+  }
+
+  /** Load the logged-in student's own record so Save updates it (never a blank create). */
+  loadOwnProfile(): void {
+    this.data.students().subscribe({
+      next: (list) => {
+        const mine = list?.[0];
+        if (mine) {
+          this.form = { ...mine, hobbies: [...(mine.hobbies || [])], interestedCourses: [...(mine.interestedCourses || [])] };
+          this.files = {};
+          this.result.set(null);
+          this.advancedFrom.clear();
+          this.tabIndex.set(0);
+          this.editing.set(true);
+        } else {
+          // No record yet — fall back to a blank form (still saved via update once created).
+          this.newStudent();
+        }
+      },
+      error: () => this.newStudent(),
+    });
+  }
+
+  /** Load a specific student's saved record into the form (from View Students → Edit). */
+  loadForEdit(id: string): void {
+    this.data.getStudent(id).subscribe({
+      next: (stu) => {
+        if (!stu) { this.newStudent(); return; }
+        this.form = { ...stu, hobbies: [...(stu.hobbies || [])], interestedCourses: [...(stu.interestedCourses || [])] };
+        this.files = {};
+        this.result.set(null);
+        this.advancedFrom.clear();
+        this.tabIndex.set(0);
+        this.editing.set(true);
+      },
+      error: () => this.newStudent(),
+    });
   }
 
   newStudent(): void {
@@ -174,13 +222,15 @@ export class StudentListComponent {
       this.snack.open('Student name is required', 'OK', { duration: 2500 });
       return;
     }
-    if (!this.form.zoneId || !this.form.centerId) {
-      this.snack.open('Zone and Center are required (Address tab)', 'OK', { duration: 3500 });
-      this.tabIndex.set(3); // jump to Address
+    if (!this.form.id && !this.form.phone) {
+      this.snack.open('Mobile number is required — students sign in with OTP', 'OK', { duration: 3500 });
+      this.tabIndex.set(0); // Account tab
       return;
     }
-    if (!this.form.id && (!this.form.userId || !this.form.password)) {
-      this.snack.open('User ID and Password are required to create the student login', 'OK', { duration: 3500 });
+    // Zone/Center are the student's fixed allotment — only the creating roles must pick them.
+    if (!this.isStudent && (!this.form.zoneId || !this.form.centerId)) {
+      this.snack.open('Zone and Center are required (Address tab)', 'OK', { duration: 3500 });
+      this.tabIndex.set(3); // jump to Address
       return;
     }
     this.saving.set(true);
@@ -239,15 +289,17 @@ export class StudentListComponent {
     const f = this.form;
     switch (key) {
       case 'account':
-        return f.id
-          ? [this.has(f.name), this.has(f.email), this.has(f.phone)]
-          : [this.has(f.name), this.has(f.email), this.has(f.phone), this.has(f.userId), this.has(f.password)];
+        // OTP-only student login → account is just Name, Email and Mobile.
+        return [this.has(f.name), this.has(f.email), this.has(f.phone)];
       case 'personal':
         return [this.has(f.gender), this.has(f.dateOfBirth), this.has(f.caste)];
       case 'education':
+        // SSLC/10th is mandatory; PU & Degree are optional so only SSLC drives completion.
+        return [this.has(f.sslcSchool), this.has(f.sslcPercent), this.has(f.sslcYear)];
+      case 'job':
         return [
-          this.has(f.educationalQualification), this.has(f.admissionYear), this.has(f.interestedInternship),
-          this.has(f.technicalSkills), this.has(f.careerGoal), this.has(f.hobbies), this.has(f.interestedCourses),
+          this.has(f.interestedInternship), this.has(f.technicalSkills),
+          this.has(f.careerGoal), this.has(f.interestedCourses),
         ];
       case 'address':
         return [
@@ -284,16 +336,12 @@ export class StudentListComponent {
     if (index >= 0 && index < this.sections.length) this.tabIndex.set(index);
   }
 
-  /** Called on any input/change in the form — auto-advance once a section hits 100%. */
+  /**
+   * Called on any input/change in the form. Auto-advancing between tabs was removed — the wizard
+   * only moves when the user clicks a Next button (goTo). This keeps the current section from
+   * jumping away while they're still filling it in.
+   */
   onFormActivity(): void {
-    const i = this.tabIndex();
-    const key = this.sections[i]?.key;
-    if (!key) return;
-    if (this.progress(key) === 100 && !this.advancedFrom.has(key) && i < this.sections.length - 1) {
-      this.advancedFrom.add(key);
-      const next = i + 1;
-      // brief pause so the user sees the section turn green before moving on
-      setTimeout(() => this.tabIndex.set(next), 450);
-    }
+    /* no-op: navigation happens only via the Next buttons */
   }
 }

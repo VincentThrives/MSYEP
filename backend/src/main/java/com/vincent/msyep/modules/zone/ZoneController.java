@@ -19,10 +19,15 @@ public class ZoneController {
 
     private final ZoneService service;
     private final ZoneRegistrationService registration;
+    private final FranchisePdfService franchisePdf;
+    private final FranchiseMailService franchiseMail;
 
-    public ZoneController(ZoneService service, ZoneRegistrationService registration) {
+    public ZoneController(ZoneService service, ZoneRegistrationService registration,
+                          FranchisePdfService franchisePdf, FranchiseMailService franchiseMail) {
         this.service = service;
         this.registration = registration;
+        this.franchisePdf = franchisePdf;
+        this.franchiseMail = franchiseMail;
     }
 
     @GetMapping
@@ -79,5 +84,33 @@ public class ZoneController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=zone-" + id + ".pdf")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(new ByteArrayResource(pdf));
+    }
+
+    /** Personalised franchise MOU (template with logos/name/signatures applied). */
+    @GetMapping("/{id}/mou")
+    public ResponseEntity<ByteArrayResource> mou(@PathVariable String id) {
+        byte[] pdf = franchisePdf.buildMou(service.findById(id));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Franchise-MOU-" + id + ".pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(new ByteArrayResource(pdf));
+    }
+
+    /** Standalone franchise certificate PDF. */
+    @GetMapping("/{id}/certificate")
+    public ResponseEntity<ByteArrayResource> certificate(@PathVariable String id) {
+        byte[] pdf = franchisePdf.buildCertificate(service.findById(id));
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=Franchise-Certificate-" + id + ".pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(new ByteArrayResource(pdf));
+    }
+
+    /** Generate the certificate + MOU and email both to the franchise (call after uploads finish). */
+    @PostMapping("/{id}/send-documents")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','ZONE')")
+    public ApiResponse<Map<String, String>> sendDocuments(@PathVariable String id) {
+        String note = franchiseMail.sendDocuments(service.findById(id));
+        return ApiResponse.ok(note, Map.of("note", note));
     }
 }

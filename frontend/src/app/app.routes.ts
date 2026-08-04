@@ -25,15 +25,21 @@ export const routes: Routes = [
       },
       {
         path: 'zones',
-        canActivate: [roleGuard('ADMIN')],
+        canActivate: [roleGuard('ADMIN', 'STAFF')],
         loadComponent: () =>
           import('./features/zones/zone-list.component').then((m) => m.ZoneListComponent),
       },
       {
         path: 'centers',
-        canActivate: [roleGuard('ADMIN', 'ZONE', 'CENTER')],
+        canActivate: [roleGuard('ADMIN', 'ZONE', 'CENTER', 'STAFF')],
         loadComponent: () =>
           import('./features/centers/center-list.component').then((m) => m.CenterListComponent),
+      },
+      {
+        path: 'center-map',
+        canActivate: [roleGuard('ADMIN', 'ZONE', 'CENTER', 'STAFF')],
+        loadComponent: () =>
+          import('./features/center-map/center-map.component').then((m) => m.CenterMapComponent),
       },
       {
         path: 'students',
@@ -59,9 +65,15 @@ export const routes: Routes = [
       },
       {
         path: 'finance',
-        canActivate: [roleGuard('ADMIN', 'FINANCE')],
+        canActivate: [roleGuard('ADMIN', 'FINANCE', 'STAFF')],
         loadComponent: () =>
           import('./features/finance/finance-table.component').then((m) => m.FinanceTableComponent),
+      },
+      {
+        path: 'finance-mail',
+        canActivate: [roleGuard('ADMIN', 'FINANCE', 'STAFF')],
+        loadComponent: () =>
+          import('./features/finance/finance-mail.component').then((m) => m.FinanceMailComponent),
       },
       {
         path: 'users',
@@ -77,7 +89,7 @@ export const routes: Routes = [
       },
       {
         path: 'location',
-        canActivate: [roleGuard('ADMIN')],
+        canActivate: [roleGuard('ADMIN', 'STAFF')],
         loadComponent: () =>
           import('./features/location/location-management.component').then((m) => m.LocationManagementComponent),
       },
@@ -94,7 +106,7 @@ export const routes: Routes = [
       },
       {
         path: 'sow',
-        canActivate: [roleGuard('ADMIN', 'ZONE', 'CENTER')],
+        canActivate: [roleGuard('ADMIN', 'ZONE', 'CENTER', 'STAFF')],
         loadComponent: () =>
           import('./features/sow/sow.component').then((m) => m.SowComponent),
       },
@@ -106,9 +118,15 @@ export const routes: Routes = [
       },
       {
         path: 'resource-persons',
-        canActivate: [roleGuard('ADMIN', 'ZONE', 'CENTER')],
+        canActivate: [roleGuard('ADMIN', 'ZONE', 'CENTER', 'STAFF')],
         loadComponent: () =>
           import('./features/resource-person/resource-person.component').then((m) => m.ResourcePersonComponent),
+      },
+      {
+        path: 'franchise-settings',
+        canActivate: [roleGuard('ADMIN')],
+        loadComponent: () =>
+          import('./features/franchise-settings/franchise-settings.component').then((m) => m.FranchiseSettingsComponent),
       },
       {
         path: 'vbsow',

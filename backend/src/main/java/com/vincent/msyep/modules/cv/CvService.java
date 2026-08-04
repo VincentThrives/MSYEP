@@ -6,11 +6,13 @@ import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.borders.Border;
+import com.itextpdf.layout.borders.SolidBorder;
 import com.itextpdf.layout.element.Cell;
 import com.itextpdf.layout.element.Image;
 import com.itextpdf.layout.element.Paragraph;
 import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.element.Text;
+import com.itextpdf.layout.properties.HorizontalAlignment;
 import com.itextpdf.layout.properties.TextAlignment;
 import com.itextpdf.layout.properties.UnitValue;
 import com.vincent.msyep.common.IdGen;
@@ -21,12 +23,14 @@ import com.vincent.msyep.modules.student.StudentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -197,9 +201,14 @@ public class CvService {
     // ---- PDF ----
 
     public byte[] buildCv(String studentId) {
+        return buildCv(studentId, true);
+    }
+
+    /** Build the resume PDF. Admin exports pass requirePayment=false to skip the ₹90 gate. */
+    public byte[] buildCv(String studentId, boolean requirePayment) {
         Student s = students.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
-        if (!isPaid(studentId)) {
+        if (requirePayment && !isPaid(studentId)) {
             throw new IllegalStateException("Payment required before downloading the CV.");
         }
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -246,9 +255,30 @@ public class CvService {
             right.add(new Paragraph(nz(s.getCareerGoal())).setFontSize(10).setMarginBottom(4));
 
             right.add(mainHeading("EDUCATION"));
-            right.add(bullet(nz(s.getEducationalQualification())
-                    + (has(s.getCollegeName()) ? " — " + s.getCollegeName() : "")));
-            if (has(s.getAdmissionYear())) right.add(bullet("Admission Year: " + s.getAdmissionYear()));
+            boolean anyEdu = has(s.getSslcSchool()) || has(s.getSslcPercent()) || has(s.getSslcYear())
+                    || has(s.getPuSchool()) || has(s.getPuPercent()) || has(s.getPuYear()) || has(s.getPuStream())
+                    || has(s.getDegreeCollege()) || has(s.getDegreePercent()) || has(s.getDegreeYear()) || has(s.getDegreeStream());
+            if (anyEdu) {
+                Table edu = new Table(UnitValue.createPercentArray(new float[]{26, 30, 12, 32}))
+                        .setWidth(UnitValue.createPercentValue(100)).setMarginBottom(6);
+                edu.addHeaderCell(eduHead("Qualification"));
+                edu.addHeaderCell(eduHead("Institution / Course"));
+                edu.addHeaderCell(eduHead("Year"));
+                edu.addHeaderCell(eduHead("Percentage / CGPA"));
+                if (has(s.getSslcSchool()) || has(s.getSslcPercent()) || has(s.getSslcYear())) {
+                    eduRow(edu, "SSLC / 10th", null, s.getSslcSchool(), s.getSslcYear(), s.getSslcMarkType(), s.getSslcPercent());
+                }
+                if (has(s.getPuSchool()) || has(s.getPuPercent()) || has(s.getPuYear()) || has(s.getPuStream())) {
+                    eduRow(edu, "PU / Diploma", s.getPuStream(), s.getPuSchool(), s.getPuYear(), s.getPuMarkType(), s.getPuPercent());
+                }
+                if (has(s.getDegreeCollege()) || has(s.getDegreePercent()) || has(s.getDegreeYear()) || has(s.getDegreeStream())) {
+                    eduRow(edu, "Degree", s.getDegreeStream(), s.getDegreeCollege(), s.getDegreeYear(), s.getDegreeMarkType(), s.getDegreePercent());
+                }
+                right.add(edu);
+            } else {
+                right.add(bullet(nz(s.getEducationalQualification())
+                        + (has(s.getCollegeName()) ? " — " + s.getCollegeName() : "")));
+            }
             if (has(s.getRegisterNo())) right.add(bullet("MSYEP Register No: " + s.getRegisterNo()));
 
             String interests = interests(s);
@@ -266,10 +296,31 @@ public class CvService {
             layout.addCell(left);
             layout.addCell(right);
             doc.add(layout);
+
+            // ---- Footer: YKTK logo, centred ----
+            byte[] logo = readLogo();
+            if (logo != null) {
+                try {
+                    Image lg = new Image(ImageDataFactory.create(logo));
+                    lg.setWidth(210);
+                    lg.setHorizontalAlignment(HorizontalAlignment.CENTER);
+                    lg.setMarginTop(18).setMarginBottom(8);
+                    doc.add(lg);
+                } catch (Exception ignored) { }
+            }
         } catch (Exception e) {
             throw new IllegalStateException("Failed to build CV: " + e.getMessage());
         }
         return out.toByteArray();
+    }
+
+    /** The YKTK footer logo bundled in resources (null if missing). */
+    private byte[] readLogo() {
+        try (InputStream in = new ClassPathResource("yktk-logo.png").getInputStream()) {
+            return in.readAllBytes();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private byte[] readPhoto(Student s) {
@@ -319,6 +370,32 @@ public class CvService {
 
     private static Paragraph bullet(String t) {
         return new Paragraph("• " + nz(t)).setFontSize(10).setMarginBottom(1);
+    }
+
+    private static final DeviceRgb EDU_LINE = new DeviceRgb(206, 218, 210);
+
+    /** Header cell for the EDUCATION table. */
+    private static Cell eduHead(String t) {
+        return new Cell().add(new Paragraph(t).setBold().setFontSize(7.5f).setFontColor(new DeviceRgb(255, 255, 255)))
+                .setBackgroundColor(GREEN).setBorder(new SolidBorder(EDU_LINE, 0.5f)).setPadding(4);
+    }
+
+    /** One row in the EDUCATION table; the marks cell is highlighted with the chosen type. */
+    private static void eduRow(Table t, String level, String stream, String institution,
+                               String year, String markType, String value) {
+        Paragraph q = new Paragraph().add(new Text(level).setBold().setFontSize(8.5f));
+        if (has(stream)) q.add(new Text("\n" + stream).setFontSize(7).setFontColor(new DeviceRgb(90, 100, 95)));
+        t.addCell(eduCell(q));
+        t.addCell(eduCell(new Paragraph(nz(institution)).setFontSize(8.5f)));
+        t.addCell(eduCell(new Paragraph(nz(year)).setFontSize(8.5f)));
+        String mk = has(value) ? ((has(markType) ? markType : "Marks") + " - " + value) : "—";
+        Cell marks = eduCell(new Paragraph(mk).setBold().setFontSize(8.5f).setFontColor(new DeviceRgb(14, 81, 50)));
+        if (has(value)) marks.setBackgroundColor(new DeviceRgb(255, 243, 176));
+        t.addCell(marks);
+    }
+
+    private static Cell eduCell(Paragraph p) {
+        return new Cell().add(p.setMultipliedLeading(1.05f)).setBorder(new SolidBorder(EDU_LINE, 0.5f)).setPadding(4);
     }
 
     private static boolean has(String v) {
