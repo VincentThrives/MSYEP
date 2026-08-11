@@ -24,13 +24,16 @@ public class ZoneRegistrationService {
     private final UserRepository users;
     private final CounterService counters;
     private final PasswordEncoder encoder;
+    private final FranchiseMailService franchiseMail;
 
     public ZoneRegistrationService(ZoneRepository zones, UserRepository users,
-                                   CounterService counters, PasswordEncoder encoder) {
+                                   CounterService counters, PasswordEncoder encoder,
+                                   FranchiseMailService franchiseMail) {
         this.zones = zones;
         this.users = users;
         this.counters = counters;
         this.encoder = encoder;
+        this.franchiseMail = franchiseMail;
     }
 
     public ZoneRegistrationResult register(Zone input) {
@@ -81,6 +84,13 @@ public class ZoneRegistrationService {
                     .zoneId(saved.getId())
                     .active(true)
                     .build());
+        }
+
+        // Auto-email the franchise Certificate + MOU to the new zone's own address (recorded in Zone mail history).
+        try {
+            franchiseMail.sendDocuments(saved);
+        } catch (Exception e) {
+            log.warn("auto zone-mail on create failed for {}: {}", saved.getId(), e.getMessage());
         }
 
         String note = wantsLogin

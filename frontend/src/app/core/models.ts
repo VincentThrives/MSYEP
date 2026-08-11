@@ -596,5 +596,25 @@ export interface GramPanchayat {
   contactPerson?: string;
 }
 
+/** One Finance-wing mail dispatch, shown in the Sent Mail History. */
+export interface MailLog {
+  id: string;
+  sentAt: string;
+  recipients: string[];
+  subject: string;
+  body?: string;
+  gramPanchayat?: string;
+  taluk?: string;
+  district?: string;
+  studentIds: string[];
+  studentNames: string[];
+  attachment?: string;
+  sent: number;
+  total: number;
+  status: string;
+  stub: boolean;
+  results?: Record<string, string>;
+}
+
 /** Degree/course options under a zone. */
 export const COURSES = ['PU', 'SSLC', 'ITI', 'DIPLOMA', 'DEGREE'];

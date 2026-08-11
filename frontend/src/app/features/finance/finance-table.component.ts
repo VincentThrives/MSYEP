@@ -13,11 +13,12 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
 import { DataService } from '../../core/data.service';
-import { Center, FinanceRow, GramPanchayat } from '../../core/models';
+import { Center, FinanceRow, GramPanchayat, MailLog } from '../../core/models';
 import { SearchSelectComponent } from '../../shared/search-select.component';
 import { MultiSearchSelectComponent } from '../../shared/multi-search-select.component';
 import { LocationPickerComponent } from '../../shared/location-picker.component';
 import { SendMailDialogComponent } from './send-mail-dialog.component';
+import { MailViewDialogComponent } from './mail-view-dialog.component';
 
 @Component({
   selector: 'app-finance-table',
@@ -49,6 +50,10 @@ export class FinanceTableComponent {
   gpMails = signal<GramPanchayat[]>([]);
   selectedMails = signal<string[]>([]);
 
+  /** Sent-mail history — click a row to open the full mail. */
+  mailHistory = signal<MailLog[]>([]);
+  historyCols = ['sentAt', 'recipients', 'gp', 'students', 'status'];
+
   filter: { district?: string; taluk?: string; gramPanchayat?: string; centerId?: string } = {};
   selected = new Set<string>();
   selectedIds = signal<string[]>([]);
@@ -63,6 +68,7 @@ export class FinanceTableComponent {
     });
     this.data.centers().subscribe({ next: (c) => this.centers.set(c), error: (e) => this.err('centers', e) });
     this.loadGpMails();
+    this.loadHistory();
     this.fetch();
   }
 
@@ -76,6 +82,18 @@ export class FinanceTableComponent {
       next: (r) => this.gpMails.set(r.filter((g) => (g.email || '').trim())),
       error: (e) => this.err('GP mail IDs', e),
     });
+  }
+
+  private loadHistory(): void {
+    this.data.financeMailHistory().subscribe({
+      next: (h) => this.mailHistory.set(h || []),
+      error: (e) => this.err('mail history', e),
+    });
+  }
+
+  /** Open a past sent mail in a read-only dialog. */
+  openMail(m: MailLog): void {
+    this.dialog.open(MailViewDialogComponent, { data: m, width: '600px', maxWidth: '92vw' });
   }
 
   /**
@@ -134,17 +152,9 @@ export class FinanceTableComponent {
     this.dispatch([r.studentId]);
   }
 
-  sendBulk(): void {
-    this.dispatch(this.selectedIds());
-  }
-
-  /** Send the selected students' documents to the chosen GP mail IDs. */
-  sendToSelectedMails(): void {
-    if (!this.selectedMails().length) {
-      this.snack.open('Pick at least one Gram Panchayat mail ID', 'OK', { duration: 2500 });
-      return;
-    }
-    this.dispatch(this.selectedIds(), this.selectedMails());
+  /** Send selected students' documents — to the picked GP mail IDs, or each student's auto-mapped GP if none picked. */
+  sendSelected(): void {
+    this.dispatch(this.selectedIds(), this.selectedMails().length ? this.selectedMails() : undefined);
   }
 
   /** Download the GP Blue Print financial packet for the current Gram Panchayat filter. */
@@ -196,6 +206,7 @@ export class FinanceTableComponent {
         const sent = Object.values(res).filter((v) => v.startsWith('SENT')).length;
         const to = recipientEmails?.length ? ` to ${recipientEmails.length} mail ID(s)` : '';
         this.snack.open(`Mail dispatched${to}: ${sent}/${studentIds.length} sent`, 'OK', { duration: 3500 });
+        this.loadHistory();
       },
       error: (e) => this.snack.open(e?.error?.message || 'Send failed', 'OK', { duration: 3500 }),
     });

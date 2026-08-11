@@ -69,6 +69,13 @@ public class FinanceController {
         return ApiResponse.ok("Mail dispatch complete", service.sendDocuments(req));
     }
 
+    /** Sent-mail history (most recent first) for the Finance wing. */
+    @GetMapping("/mail-history")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','FINANCE','STAFF')")
+    public ApiResponse<List<MailLog>> mailHistory() {
+        return ApiResponse.ok(service.mailHistory());
+    }
+
     // ---- Gram Panchayat email mapping management ----
     @GetMapping("/gram-panchayats")
     public ApiResponse<List<GramPanchayat>> listGp() {

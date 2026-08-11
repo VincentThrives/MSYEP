@@ -30,6 +30,18 @@ export const routes: Routes = [
           import('./features/zones/zone-list.component').then((m) => m.ZoneListComponent),
       },
       {
+        path: 'zone-mail',
+        canActivate: [roleGuard('ADMIN', 'STAFF')],
+        loadComponent: () =>
+          import('./features/zones/zone-mail.component').then((m) => m.ZoneMailComponent),
+      },
+      {
+        path: 'center-mail',
+        canActivate: [roleGuard('ADMIN', 'STAFF')],
+        loadComponent: () =>
+          import('./features/centers/center-mail.component').then((m) => m.CenterMailComponent),
+      },
+      {
         path: 'centers',
         canActivate: [roleGuard('ADMIN', 'ZONE', 'CENTER', 'STAFF')],
         loadComponent: () =>

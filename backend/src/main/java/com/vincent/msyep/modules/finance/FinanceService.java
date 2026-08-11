@@ -29,19 +29,27 @@ public class FinanceService {
     private final CenterRepository centerRepo;
     private final GramPanchayatRepository gpRepo;
     private final GpBlueprintPdfService gpBlueprint;
+    private final MailLogRepository mailLogs;
     private final Optional<JavaMailSender> mailSender;
     private final String mailUsername;
 
     public FinanceService(MongoTemplate mongo, CenterRepository centerRepo,
                           GramPanchayatRepository gpRepo, GpBlueprintPdfService gpBlueprint,
+                          MailLogRepository mailLogs,
                           Optional<JavaMailSender> mailSender,
                           @org.springframework.beans.factory.annotation.Value("${spring.mail.username:}") String mailUsername) {
         this.mongo = mongo;
         this.centerRepo = centerRepo;
         this.gpRepo = gpRepo;
         this.gpBlueprint = gpBlueprint;
+        this.mailLogs = mailLogs;
         this.mailSender = mailSender;
         this.mailUsername = mailUsername;
+    }
+
+    /** Sent-mail history (most recent first) for the Finance wing. */
+    public List<MailLog> mailHistory() {
+        return mailLogs.findTop100ByChannelOrderBySentAtDesc("FINANCE");
     }
 
     /** SMTP is "configured" only when a JavaMailSender bean exists AND a username is set. */
@@ -115,12 +123,17 @@ public class FinanceService {
                 log.warn("GP blueprint build failed for {}: {}", req.gramPanchayat(), ex.getMessage());
             }
         }
+        java.util.LinkedHashSet<String> allRecipients = new java.util.LinkedHashSet<>();
+        List<String> names = new java.util.ArrayList<>();
+        int sent = 0;
         for (String studentId : req.studentIds()) {
             Student s = mongo.findById(studentId, Student.class);
             if (s == null) {
                 result.put(studentId, "NOT_FOUND");
+                names.add("(unknown)");
                 continue;
             }
+            names.add(s.getName() == null ? "" : s.getName());
             List<String> recipients = !picked.isEmpty() ? picked
                     : StringUtils.hasText(req.overrideEmail()) ? List.of(req.overrideEmail())
                     : (StringUtils.hasText(resolveGpEmail(s.getGramPanchayat()))
@@ -132,9 +145,33 @@ public class FinanceService {
             try {
                 send(recipients, s, req, blueprint);
                 result.put(studentId, "SENT:" + String.join(", ", recipients));
+                allRecipients.addAll(recipients);
+                sent++;
             } catch (Exception ex) {
                 result.put(studentId, "FAILED:" + ex.getMessage());
             }
+        }
+        // Record this dispatch in the sent-mail history (best-effort — never breaks the send).
+        try {
+            boolean stub = !mailConfigured();
+            int total = req.studentIds().size();
+            mailLogs.save(MailLog.builder()
+                    .channel("FINANCE")
+                    .sentAt(java.time.Instant.now())
+                    .recipients(new java.util.ArrayList<>(allRecipients))
+                    .subject(StringUtils.hasText(req.subject()) ? req.subject() : "MSYEP — Student FW Documents")
+                    .body(req.body())
+                    .gramPanchayat(req.gramPanchayat()).taluk(req.taluk()).district(req.district())
+                    .studentIds(new java.util.ArrayList<>(req.studentIds()))
+                    .studentNames(names)
+                    .attachment(blueprint != null ? "GP-Blueprint-" + (req.gramPanchayat() == null ? "" : req.gramPanchayat()) + ".pdf" : null)
+                    .sent(sent).total(total)
+                    .status((stub ? "stub — SMTP not configured · " : "") + sent + "/" + total + " sent")
+                    .stub(stub)
+                    .results(new HashMap<>(result))
+                    .build());
+        } catch (Exception ex) {
+            log.warn("mail-log save failed: {}", ex.getMessage());
         }
         return result;
     }

@@ -23,6 +23,7 @@ const ZONES_GROUP: NavItem = {
   label: 'Zones', icon: 'public', children: [
     { label: 'Create Zone', path: '/app/zones', icon: 'add_business', queryParams: { new: 1 } },
     { label: 'View Zones', path: '/app/zones', icon: 'list_alt' },
+    { label: 'Mail', path: '/app/zone-mail', icon: 'mail' },
   ],
 };
 const CENTERS_GROUP: NavItem = {
@@ -30,6 +31,7 @@ const CENTERS_GROUP: NavItem = {
     { label: 'Create Center', path: '/app/centers', icon: 'add_home_work', queryParams: { new: 1 } },
     { label: 'View Centers', path: '/app/centers', icon: 'list_alt' },
     { label: 'Center Map', path: '/app/center-map', icon: 'map' },
+    { label: 'Mail', path: '/app/center-mail', icon: 'mail' },
   ],
 };
 const STAFF_GROUP: NavItem = {

@@ -40,18 +40,21 @@ public class CenterRegistrationService {
     private final org.springframework.security.crypto.password.PasswordEncoder encoder;
     private final Optional<JavaMailSender> mailSender;
     private final String mailFrom;
+    private final CenterMailService centerMail;
 
     public CenterRegistrationService(CenterRepository centers, UserRepository users,
                                      CounterService counters,
                                      org.springframework.security.crypto.password.PasswordEncoder encoder,
                                      Optional<JavaMailSender> mailSender,
-                                     @Value("${spring.mail.username:}") String mailFrom) {
+                                     @Value("${spring.mail.username:}") String mailFrom,
+                                     CenterMailService centerMail) {
         this.centers = centers;
         this.users = users;
         this.counters = counters;
         this.encoder = encoder;
         this.mailSender = mailSender;
         this.mailFrom = mailFrom;
+        this.centerMail = centerMail;
     }
 
     /**
@@ -134,6 +137,13 @@ public class CenterRegistrationService {
                 note = "Email failed: " + ex.getMessage() + " — PDF available to download.";
                 log.warn("Failed to email center registration to {}", deliveryEmail, ex);
             }
+        }
+
+        // Auto-email the Center Batch Approval PDF to the center's own address (recorded in Center mail history).
+        try {
+            centerMail.sendDocuments(saved);
+        } catch (Exception e) {
+            log.warn("auto center-mail on create failed for {}: {}", saved.getId(), e.getMessage());
         }
 
         return new CenterRegistrationResult(saved, code, enrollment, batchCode, loginId, emailSent, note);

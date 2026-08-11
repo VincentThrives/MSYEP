@@ -21,9 +21,10 @@
       <app-multi-search-select label="Gram Panchayat Mails" [options]="mailOptions()"
         valueKey="email" labelKey="label" [(value)]="selectedMails"></app-multi-search-select>
       <button mat-flat-button color="primary"
-        [disabled]="!selectedIds().length || !selectedMails().length" (click)="sendToSelectedMails()">
+        [disabled]="!selectedIds().length" (click)="sendSelected()"
+        matTooltip="Sends to the picked mail IDs — or each student's auto-mapped GP if none are picked">
         <mat-icon>send</mat-icon>
-        Send to selected mail ID(s)
+        Send documents to GP
       </button>
       <button mat-stroked-button [disabled]="!filter.gramPanchayat" (click)="downloadGpBlueprint()"
         matTooltip="Cover + Kannada requisition letter + invoice for this GP">
@@ -36,10 +37,7 @@
     </div>
 
     <div class="bulk" *ngIf="selectedIds().length">
-      {{ selectedIds().length }} student(s) selected
-      <button mat-flat-button color="primary" (click)="sendBulk()">
-        <mat-icon>send</mat-icon> Send mail to auto-mapped GP
-      </button>
+      {{ selectedIds().length }} student(s) selected — use “Send documents to GP” above, or the per-row send icon.
     </div>
 
     <table mat-table [dataSource]="rows()" class="mat-elevation-z1 full">
@@ -102,4 +100,36 @@
     <p *ngIf="!rows().length" class="empty">
       No students for the selected filters. Choose Taluk / District / Gram Panchayat / Center above.
     </p>
+
+    <div class="history" *ngIf="mailHistory().length">
+      <h3><mat-icon>history</mat-icon> Sent Mail History</h3>
+      <p class="hint">Click a row to open the full sent mail.</p>
+      <table mat-table [dataSource]="mailHistory()" class="mat-elevation-z1 full hist">
+        <ng-container matColumnDef="sentAt">
+          <th mat-header-cell *matHeaderCellDef>Sent</th>
+          <td mat-cell *matCellDef="let m">{{ m.sentAt | date: 'dd-MM-yyyy HH:mm' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="recipients">
+          <th mat-header-cell *matHeaderCellDef>Recipients</th>
+          <td mat-cell *matCellDef="let m">
+            <span *ngIf="m.recipients?.length; else autoMapped">{{ m.recipients.join(', ') }}</span>
+            <ng-template #autoMapped><span class="muted">auto-mapped GP</span></ng-template>
+          </td>
+        </ng-container>
+        <ng-container matColumnDef="gp">
+          <th mat-header-cell *matHeaderCellDef>Gram Panchayat</th>
+          <td mat-cell *matCellDef="let m">{{ m.gramPanchayat || '—' }}</td>
+        </ng-container>
+        <ng-container matColumnDef="students">
+          <th mat-header-cell *matHeaderCellDef>Students</th>
+          <td mat-cell *matCellDef="let m">{{ m.studentNames?.length || 0 }}</td>
+        </ng-container>
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let m"><span class="badge" [class.stub]="m.stub">{{ m.status }}</span></td>
+        </ng-container>
+        <tr mat-header-row *matHeaderRowDef="historyCols"></tr>
+        <tr mat-row *matRowDef="let row; columns: historyCols" class="hist-row" (click)="openMail(row)"></tr>
+      </table>
+    </div>
   

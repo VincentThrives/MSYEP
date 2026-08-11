@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ApiService } from './api.service';
-import { Center, CenterRegistrationResult, EntranceResult, EntranceStart, FinanceRow, GramPanchayat, Staff, Student, StudentRegistrationResult, Zone, ZoneRegistrationResult } from './models';
+import { Center, CenterRegistrationResult, EntranceResult, EntranceStart, FinanceRow, GramPanchayat, MailLog, Staff, Student, StudentRegistrationResult, Zone, ZoneRegistrationResult } from './models';
 
 @Injectable({ providedIn: 'root' })
 export class DataService {
@@ -18,6 +18,9 @@ export class DataService {
   zoneMou = (id: string) => this.api.blob(`/zones/${id}/mou`);
   zoneCertificate = (id: string) => this.api.blob(`/zones/${id}/certificate`);
   sendZoneDocuments = (id: string) => this.api.post<{ note: string }>(`/zones/${id}/send-documents`, {});
+  zoneSendMail = (body: { zoneIds: string[]; subject?: string; body?: string }) =>
+    this.api.post<Record<string, string>>('/zones/send-mail', body);
+  zoneMailHistory = () => this.api.get<MailLog[]>('/zones/mail-history');
 
   // Franchise settings (one-time admin assets)
   franchiseSettings = () =>
@@ -50,6 +53,9 @@ export class DataService {
   updateCenter = (id: string, c: Center) => this.api.put<Center>(`/centers/${id}`, c);
   deleteCenter = (id: string) => this.api.delete<void>(`/centers/${id}`);
   centerBatchApprovalPdf = (id: string) => this.api.blob(`/centers/${id}/batch-approval-pdf`);
+  centerSendMail = (body: { centerIds: string[]; subject?: string; body?: string }) =>
+    this.api.post<Record<string, string>>('/centers/send-mail', body);
+  centerMailHistory = () => this.api.get<MailLog[]>('/centers/mail-history');
   uploadCenterDocument = (id: string, type: string, label: string, file: File) => {
     const form = new FormData();
     form.append('type', type);
@@ -95,6 +101,7 @@ export class DataService {
   gpBlueprintPdf = (f: { gramPanchayat?: string; taluk?: string; district?: string }) =>
     this.api.blob('/finance/gp-blueprint-pdf', f);
   gramPanchayats = () => this.api.get<GramPanchayat[]>('/finance/gram-panchayats');
+  financeMailHistory = () => this.api.get<MailLog[]>('/finance/mail-history');
   saveGramPanchayat = (gp: GramPanchayat) => this.api.post<GramPanchayat>('/finance/gram-panchayats', gp);
   deleteGramPanchayat = (id: string) => this.api.delete<void>(`/finance/gram-panchayats/${id}`);
 

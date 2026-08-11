@@ -1,7 +1,10 @@
 package com.vincent.msyep.modules.zone;
 
 import com.vincent.msyep.common.ApiResponse;
+import com.vincent.msyep.modules.finance.MailLog;
+import com.vincent.msyep.modules.zone.dto.ZoneMailRequest;
 import com.vincent.msyep.modules.zone.dto.ZoneRegistrationResult;
+import jakarta.validation.Valid;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -112,5 +115,22 @@ public class ZoneController {
     public ApiResponse<Map<String, String>> sendDocuments(@PathVariable String id) {
         String note = franchiseMail.sendDocuments(service.findById(id));
         return ApiResponse.ok(note, Map.of("note", note));
+    }
+
+    /** Bulk-send franchise Certificate + MOU to selected zones (Zone Mail page). */
+    @PostMapping("/send-mail")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STAFF')")
+    public ApiResponse<Map<String, String>> sendMail(@Valid @RequestBody ZoneMailRequest req) {
+        List<Zone> zones = req.zoneIds().stream()
+                .map(id -> { try { return service.findById(id); } catch (Exception e) { return null; } })
+                .filter(java.util.Objects::nonNull).toList();
+        return ApiResponse.ok("Mail dispatch complete", franchiseMail.sendToZones(zones, req.subject(), req.body()));
+    }
+
+    /** Sent-mail history for the Zone wing. */
+    @GetMapping("/mail-history")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STAFF')")
+    public ApiResponse<List<MailLog>> mailHistory() {
+        return ApiResponse.ok(franchiseMail.history());
     }
 }

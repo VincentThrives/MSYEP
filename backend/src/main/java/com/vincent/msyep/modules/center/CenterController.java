@@ -2,7 +2,10 @@ package com.vincent.msyep.modules.center;
 
 import com.vincent.msyep.common.ApiResponse;
 import com.vincent.msyep.config.security.MsyepPrincipal;
+import com.vincent.msyep.modules.center.dto.CenterMailRequest;
 import com.vincent.msyep.modules.center.dto.CenterRegistrationResult;
+import com.vincent.msyep.modules.finance.MailLog;
+import jakarta.validation.Valid;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -22,12 +25,14 @@ public class CenterController {
     private final CenterService service;
     private final CenterRegistrationService registration;
     private final CenterBatchApprovalPdfService batchApproval;
+    private final CenterMailService centerMail;
 
     public CenterController(CenterService service, CenterRegistrationService registration,
-                            CenterBatchApprovalPdfService batchApproval) {
+                            CenterBatchApprovalPdfService batchApproval, CenterMailService centerMail) {
         this.service = service;
         this.registration = registration;
         this.batchApproval = batchApproval;
+        this.centerMail = centerMail;
     }
 
     @GetMapping
@@ -69,6 +74,23 @@ public class CenterController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition)
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(new ByteArrayResource(pdf));
+    }
+
+    /** Bulk-send the Batch Approval PDF to selected centers (Center Mail page). */
+    @PostMapping("/send-mail")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STAFF')")
+    public ApiResponse<java.util.Map<String, String>> sendMail(@Valid @RequestBody CenterMailRequest req) {
+        List<Center> centers = req.centerIds().stream()
+                .map(id -> { try { return service.findById(id); } catch (Exception e) { return null; } })
+                .filter(java.util.Objects::nonNull).toList();
+        return ApiResponse.ok("Mail dispatch complete", centerMail.sendToCenters(centers, req.subject(), req.body()));
+    }
+
+    /** Sent-mail history for the Center wing. */
+    @GetMapping("/mail-history")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STAFF')")
+    public ApiResponse<List<MailLog>> mailHistory() {
+        return ApiResponse.ok(centerMail.history());
     }
 
     /** Upload one center document (max 500 KB) into a named slot. */

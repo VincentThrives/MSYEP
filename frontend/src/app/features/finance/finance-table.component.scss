@@ -10,3 +10,19 @@
     .full { width: 100%; }
     .empty { color: #999; margin-top: 16px; }
   
+
+.history {
+  margin-top: 28px;
+
+  h3 { display: flex; align-items: center; gap: 6px; color: #1b5e20; margin: 0 0 2px; }
+  h3 mat-icon { font-size: 20px; width: 20px; height: 20px; }
+  .hint { color: #789; margin: 0 0 8px; font-size: 13px; }
+
+  table.hist { width: 100%; }
+  .hist-row { cursor: pointer; }
+  .hist-row:hover { background: #f2f7f4; }
+
+  .badge { background: #e8f5e9; color: #1b5e20; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+  .badge.stub { background: #fff4e5; color: #8a5a00; }
+  .muted { color: #99a; }
+}
