@@ -2,7 +2,10 @@ package com.vincent.msyep.modules.student;
 
 import com.vincent.msyep.common.ApiResponse;
 import com.vincent.msyep.config.security.MsyepPrincipal;
+import com.vincent.msyep.modules.finance.MailLog;
+import com.vincent.msyep.modules.student.dto.StudentMailRequest;
 import com.vincent.msyep.modules.student.dto.StudentRegistrationResult;
+import jakarta.validation.Valid;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -21,12 +24,28 @@ public class StudentController {
     private final StudentService service;
     private final StudentRegistrationService registration;
     private final StudentExportService export;
+    private final StudentMailService studentMail;
 
     public StudentController(StudentService service, StudentRegistrationService registration,
-                             StudentExportService export) {
+                             StudentExportService export, StudentMailService studentMail) {
         this.service = service;
         this.registration = registration;
         this.export = export;
+        this.studentMail = studentMail;
+    }
+
+    /** Bulk-send the document packet to selected students' emails (Students Mail page). */
+    @PostMapping("/send-mail")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STAFF')")
+    public ApiResponse<java.util.Map<String, String>> sendMail(@Valid @RequestBody StudentMailRequest req) {
+        return ApiResponse.ok("Mail dispatch complete", studentMail.sendToStudents(req.studentIds(), req.subject(), req.body()));
+    }
+
+    /** Sent-mail history for the Student wing. */
+    @GetMapping("/mail-history")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STAFF')")
+    public ApiResponse<List<MailLog>> mailHistory() {
+        return ApiResponse.ok(studentMail.history());
     }
 
     /**

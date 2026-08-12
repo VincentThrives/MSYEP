@@ -52,7 +52,7 @@ export class FinanceTableComponent {
 
   /** Sent-mail history — click a row to open the full mail. */
   mailHistory = signal<MailLog[]>([]);
-  historyCols = ['sentAt', 'recipients', 'gp', 'students', 'status'];
+  historyCols = ['sentAt', 'recipients', 'gp', 'students', 'status', 'del'];
 
   filter: { district?: string; taluk?: string; gramPanchayat?: string; centerId?: string } = {};
   selected = new Set<string>();
@@ -94,6 +94,14 @@ export class FinanceTableComponent {
   /** Open a past sent mail in a read-only dialog. */
   openMail(m: MailLog): void {
     this.dialog.open(MailViewDialogComponent, { data: m, width: '600px', maxWidth: '92vw' });
+  }
+
+  deleteMail(m: MailLog): void {
+    if (!confirm('Delete this sent-mail entry? This cannot be undone.')) return;
+    this.data.deleteMailLog(m.id).subscribe({
+      next: () => { this.snack.open('Entry deleted', 'OK', { duration: 2000 }); this.loadHistory(); },
+      error: (e) => this.snack.open(e?.error?.message || 'Delete failed', 'OK', { duration: 3000 }),
+    });
   }
 
   /**

@@ -68,6 +68,9 @@ export class DataService {
   students = (centerId?: string): Observable<Student[]> =>
     this.api.get<Student[]>('/students', { centerId });
   getStudent = (id: string): Observable<Student> => this.api.get<Student>(`/students/${id}`);
+  studentSendMail = (body: { studentIds: string[]; subject?: string; body?: string }) =>
+    this.api.post<Record<string, string>>('/students/send-mail', body);
+  studentMailHistory = () => this.api.get<MailLog[]>('/students/mail-history');
   createStudent = (s: Student) => this.api.post<StudentRegistrationResult>('/students', s);
   updateStudent = (id: string, s: Student) => this.api.put<Student>(`/students/${id}`, s);
   deleteStudent = (id: string) => this.api.delete<void>(`/students/${id}`);
@@ -102,6 +105,10 @@ export class DataService {
     this.api.blob('/finance/gp-blueprint-pdf', f);
   gramPanchayats = () => this.api.get<GramPanchayat[]>('/finance/gram-panchayats');
   financeMailHistory = () => this.api.get<MailLog[]>('/finance/mail-history');
+  /** Open an attachment (PDF) from any wing's sent-mail history by log id + index. */
+  mailAttachment = (logId: string, index: number) => this.api.blob(`/mail/${logId}/attachment/${index}`);
+  /** Delete a sent-mail history entry (and its stored attachments). */
+  deleteMailLog = (logId: string) => this.api.delete<void>(`/mail/${logId}`);
   saveGramPanchayat = (gp: GramPanchayat) => this.api.post<GramPanchayat>('/finance/gram-panchayats', gp);
   deleteGramPanchayat = (id: string) => this.api.delete<void>(`/finance/gram-panchayats/${id}`);
 

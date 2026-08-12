@@ -42,6 +42,12 @@ export const routes: Routes = [
           import('./features/centers/center-mail.component').then((m) => m.CenterMailComponent),
       },
       {
+        path: 'student-mail',
+        canActivate: [roleGuard('ADMIN', 'STAFF')],
+        loadComponent: () =>
+          import('./features/students/student-mail.component').then((m) => m.StudentMailComponent),
+      },
+      {
         path: 'centers',
         canActivate: [roleGuard('ADMIN', 'ZONE', 'CENTER', 'STAFF')],
         loadComponent: () =>

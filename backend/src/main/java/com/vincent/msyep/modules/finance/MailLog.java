@@ -38,7 +38,8 @@ public class MailLog {
     private List<String> studentIds;
     private List<String> studentNames;
 
-    private String attachment;         // e.g. "GP-Blueprint-<gp>.pdf", or null
+    private String attachment;         // short label for the history column, e.g. "GP-Blueprint.pdf"
+    private List<String> attachmentNames; // per-file names — each is openable by index from mail_attachments
 
     private int sent;                  // students successfully dispatched
     private int total;                 // students attempted

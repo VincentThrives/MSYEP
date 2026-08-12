@@ -96,6 +96,14 @@ interface ZoneRow { id: string; name: string; org: string; email: string; }
           <th mat-header-cell *matHeaderCellDef>Status</th>
           <td mat-cell *matCellDef="let m"><span class="badge" [class.stub]="m.stub">{{ m.status }}</span></td>
         </ng-container>
+        <ng-container matColumnDef="del">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let m">
+            <button mat-icon-button color="warn" matTooltip="Delete entry" (click)="deleteMail(m); $event.stopPropagation()">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
         <tr mat-header-row *matHeaderRowDef="histCols"></tr>
         <tr mat-row *matRowDef="let row; columns: histCols" class="hist-row" (click)="openMail(row)"></tr>
       </table>
@@ -123,7 +131,7 @@ export class ZoneMailComponent {
   private dialog = inject(MatDialog);
 
   cols = ['select', 'name', 'org', 'email', 'send'];
-  histCols = ['sentAt', 'recipients', 'zones', 'status'];
+  histCols = ['sentAt', 'recipients', 'zones', 'status', 'del'];
 
   rows = signal<ZoneRow[]>([]);
   search = signal('');
@@ -209,5 +217,13 @@ export class ZoneMailComponent {
 
   openMail(m: MailLog): void {
     this.dialog.open(MailViewDialogComponent, { data: m, width: '600px', maxWidth: '92vw' });
+  }
+
+  deleteMail(m: MailLog): void {
+    if (!confirm('Delete this sent-mail entry? This cannot be undone.')) return;
+    this.data.deleteMailLog(m.id).subscribe({
+      next: () => { this.snack.open('Entry deleted', 'OK', { duration: 2000 }); this.loadHistory(); },
+      error: (e) => this.snack.open(e?.error?.message || 'Delete failed', 'OK', { duration: 3000 }),
+    });
   }
 }

@@ -609,6 +609,7 @@ export interface MailLog {
   studentIds: string[];
   studentNames: string[];
   attachment?: string;
+  attachmentNames?: string[];
   sent: number;
   total: number;
   status: string;

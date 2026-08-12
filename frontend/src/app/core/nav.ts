@@ -52,6 +52,7 @@ const STUDENTS_GROUP: NavItem = {
     { label: 'Create Student', path: '/app/students', icon: 'person_add' },
     { label: 'View Students', path: '/app/students/view', icon: 'list_alt' },
     { label: 'Download Documents', path: '/app/students/download-docs', icon: 'download' },
+    { label: 'Mail', path: '/app/student-mail', icon: 'mail' },
   ],
 };
 
@@ -59,13 +60,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'Dashboard', path: '/app/dashboard', icon: 'dashboard' },
   ZONES_GROUP,
   CENTERS_GROUP,
-  {
-    label: 'Students', icon: 'groups', children: [
-      { label: 'Create Student', path: '/app/students', icon: 'person_add' },
-      { label: 'View Students', path: '/app/students/view', icon: 'list_alt' },
-      { label: 'Download Documents', path: '/app/students/download-docs', icon: 'download' },
-    ],
-  },
+  STUDENTS_GROUP,
   STAFF_GROUP,
   { label: 'KPMSYEP SOW', path: '/app/sow', icon: 'description' },
   { label: 'Resource Person', path: '/app/resource-persons', icon: 'groups_2' },

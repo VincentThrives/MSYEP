@@ -12,35 +12,35 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 
 import { DataService } from '../../core/data.service';
-import { Center, MailLog } from '../../core/models';
+import { MailLog, Student } from '../../core/models';
 import { MailComposeDialogComponent } from '../../shared/mail-compose-dialog.component';
 import { MailViewDialogComponent } from '../finance/mail-view-dialog.component';
 
-interface CenterRow { id: string; name: string; code: string; email: string; }
+interface StudentRow { id: string; name: string; regNo: string; email: string; phone: string; center: string; }
 
-/** Center Mail — send the Batch Approval PDF to selected centers and view the sent-mail history. */
+/** Students Mail — send the document packet to selected students and view the sent-mail history. */
 @Component({
-  selector: 'app-center-mail',
+  selector: 'app-student-mail',
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatTableModule, MatButtonModule, MatIconModule, MatCheckboxModule,
     MatTooltipModule, MatFormFieldModule, MatInputModule, MatSnackBarModule, MatDialogModule,
   ],
   template: `
-    <div class="head"><h1>Center Mail — Batch Approval</h1></div>
+    <div class="head"><h1>Students Mail — Documents</h1></div>
 
     <div class="bar">
       <button mat-flat-button color="primary" [disabled]="!selectedIds().length" (click)="sendSelected()">
-        <mat-icon>send</mat-icon> Send Batch Approval PDF
+        <mat-icon>send</mat-icon> Send documents
       </button>
-      <span class="sel" *ngIf="selectedIds().length">{{ selectedIds().length }} center(s) selected</span>
-      <span class="hint" *ngIf="!rows().length">No centers with an email on file yet.</span>
+      <span class="sel" *ngIf="selectedIds().length">{{ selectedIds().length }} student(s) selected</span>
+      <span class="hint" *ngIf="!rows().length">No students with an email on file yet.</span>
     </div>
 
     <mat-form-field appearance="outline" class="search" *ngIf="rows().length">
-      <mat-label>Search centers</mat-label>
+      <mat-label>Search students</mat-label>
       <mat-icon matPrefix>search</mat-icon>
-      <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="name, code, email…" />
+      <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)" placeholder="name, reg no, email, phone…" />
     </mat-form-field>
 
     <table mat-table [dataSource]="filteredRows()" class="mat-elevation-z1 full" *ngIf="rows().length">
@@ -52,22 +52,30 @@ interface CenterRow { id: string; name: string; code: string; email: string; }
           <mat-checkbox [checked]="selected.has(r.id)" (change)="toggleOne(r.id, $event.checked)"></mat-checkbox>
         </td>
       </ng-container>
-      <ng-container matColumnDef="name">
-        <th mat-header-cell *matHeaderCellDef>Center</th>
-        <td mat-cell *matCellDef="let r">{{ r.name }}</td>
+      <ng-container matColumnDef="reg">
+        <th mat-header-cell *matHeaderCellDef>Reg. No</th>
+        <td mat-cell *matCellDef="let r">{{ r.regNo || '—' }}</td>
       </ng-container>
-      <ng-container matColumnDef="code">
-        <th mat-header-cell *matHeaderCellDef>Code</th>
-        <td mat-cell *matCellDef="let r">{{ r.code || '—' }}</td>
+      <ng-container matColumnDef="name">
+        <th mat-header-cell *matHeaderCellDef>Student</th>
+        <td mat-cell *matCellDef="let r">{{ r.name }}</td>
       </ng-container>
       <ng-container matColumnDef="email">
         <th mat-header-cell *matHeaderCellDef>Email</th>
         <td mat-cell *matCellDef="let r">{{ r.email }}</td>
       </ng-container>
+      <ng-container matColumnDef="phone">
+        <th mat-header-cell *matHeaderCellDef>Phone</th>
+        <td mat-cell *matCellDef="let r">{{ r.phone || '—' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="center">
+        <th mat-header-cell *matHeaderCellDef>Center / College</th>
+        <td mat-cell *matCellDef="let r">{{ r.center || '—' }}</td>
+      </ng-container>
       <ng-container matColumnDef="send">
         <th mat-header-cell *matHeaderCellDef>Send</th>
         <td mat-cell *matCellDef="let r">
-          <button mat-icon-button color="primary" matTooltip="Send to this center" (click)="sendOne(r)">
+          <button mat-icon-button color="primary" matTooltip="Send to this student" (click)="sendOne(r)">
             <mat-icon>send</mat-icon>
           </button>
         </td>
@@ -88,9 +96,13 @@ interface CenterRow { id: string; name: string; code: string; email: string; }
           <th mat-header-cell *matHeaderCellDef>Recipients</th>
           <td mat-cell *matCellDef="let m">{{ m.recipients?.join(', ') || '—' }}</td>
         </ng-container>
-        <ng-container matColumnDef="centers">
-          <th mat-header-cell *matHeaderCellDef>Centers</th>
+        <ng-container matColumnDef="students">
+          <th mat-header-cell *matHeaderCellDef>Students</th>
           <td mat-cell *matCellDef="let m">{{ m.studentNames?.length || 0 }}</td>
+        </ng-container>
+        <ng-container matColumnDef="attach">
+          <th mat-header-cell *matHeaderCellDef>Attachment</th>
+          <td mat-cell *matCellDef="let m">{{ m.attachment || '—' }}</td>
         </ng-container>
         <ng-container matColumnDef="status">
           <th mat-header-cell *matHeaderCellDef>Status</th>
@@ -114,7 +126,7 @@ interface CenterRow { id: string; name: string; code: string; email: string; }
     .bar { display: flex; align-items: center; gap: 14px; margin: 8px 0 16px; flex-wrap: wrap; }
     .sel { color: #0E5132; font-weight: 600; }
     .hint { color: #789; font-size: 13px; }
-    .search { width: 100%; max-width: 420px; display: block; margin-bottom: 4px; }
+    .search { width: 100%; max-width: 460px; display: block; margin-bottom: 4px; }
     table.full { width: 100%; }
     .history { margin-top: 28px; }
     .history h3 { display: flex; align-items: center; gap: 6px; color: #1b5e20; margin: 0 0 2px; }
@@ -125,20 +137,20 @@ interface CenterRow { id: string; name: string; code: string; email: string; }
     .badge.stub { background: #fff4e5; color: #8a5a00; }
   `],
 })
-export class CenterMailComponent {
+export class StudentMailComponent {
   private data = inject(DataService);
   private snack = inject(MatSnackBar);
   private dialog = inject(MatDialog);
 
-  cols = ['select', 'name', 'code', 'email', 'send'];
-  histCols = ['sentAt', 'recipients', 'centers', 'status', 'del'];
+  cols = ['select', 'reg', 'name', 'email', 'phone', 'center', 'send'];
+  histCols = ['sentAt', 'recipients', 'students', 'attach', 'status', 'del'];
 
-  rows = signal<CenterRow[]>([]);
+  rows = signal<StudentRow[]>([]);
   search = signal('');
   filteredRows = computed(() => {
     const q = this.search().toLowerCase().trim();
     const rs = this.rows();
-    return q ? rs.filter((r) => `${r.name} ${r.code} ${r.email}`.toLowerCase().includes(q)) : rs;
+    return q ? rs.filter((r) => `${r.name} ${r.regNo} ${r.email} ${r.phone}`.toLowerCase().includes(q)) : rs;
   });
   mailHistory = signal<MailLog[]>([]);
   selected = new Set<string>();
@@ -154,19 +166,20 @@ export class CenterMailComponent {
   }
 
   private load(): void {
-    this.data.centers().subscribe({
-      next: (cs: Center[]) => this.rows.set(
-        cs.map((c) => ({
-          id: c.id!, name: c.name, code: (c as any).code || '',
-          email: (((c as any).contactEmail || (c as any).email) || '').trim(),
+    this.data.students().subscribe({
+      next: (ss: Student[]) => this.rows.set(
+        ss.map((s) => ({
+          id: s.id!, name: s.name, regNo: (s as any).registerNo || '',
+          email: ((s as any).email || '').trim(), phone: (s as any).phone || '',
+          center: (s as any).collegeName || (s as any).centerName || '',
         })).filter((r) => r.id && r.email),
       ),
-      error: (e) => this.snack.open(e?.error?.message || 'Could not load centers', 'OK', { duration: 3000 }),
+      error: (e) => this.snack.open(e?.error?.message || 'Could not load students', 'OK', { duration: 3000 }),
     });
   }
 
   private loadHistory(): void {
-    this.data.centerMailHistory().subscribe({
+    this.data.studentMailHistory().subscribe({
       next: (h) => this.mailHistory.set(h || []),
       error: () => {},
     });
@@ -183,30 +196,30 @@ export class CenterMailComponent {
     this.selectedIds.set([...this.selected]);
   }
 
-  sendOne(r: CenterRow): void { this.dispatch([r.id], [r.email]); }
+  sendOne(r: StudentRow): void { this.dispatch([r.id], [r.email]); }
   sendSelected(): void {
     const ids = this.selectedIds();
     const emails = this.rows().filter((r) => this.selected.has(r.id)).map((r) => r.email);
     this.dispatch(ids, emails);
   }
 
-  private dispatch(centerIds: string[], recipients: string[]): void {
-    if (!centerIds.length) return;
+  private dispatch(studentIds: string[], recipients: string[]): void {
+    if (!studentIds.length) return;
     const ref = this.dialog.open(MailComposeDialogComponent, {
       width: '600px', maxWidth: '92vw',
       data: {
-        recipients, targetCount: centerIds.length, targetNoun: 'center',
-        attachmentLabel: 'Batch Approval PDF',
-        defaultSubject: 'KP-MSYEP Center Batch Approval',
-        defaultBody: 'Dear Center,\n\nPlease find attached your KP-MSYEP Center Batch Approval document.\n\nRegards,\nYKTK · KP-MSYEP',
+        recipients, targetCount: studentIds.length, targetNoun: 'student',
+        attachmentLabel: 'Document packet',
+        defaultSubject: 'MSYEP — Your Documents',
+        defaultBody: 'Dear Student,\n\nPlease find attached your MSYEP document packet.\n\nRegards,\nYKTK · KP-MSYEP',
       },
     });
     ref.afterClosed().subscribe((res?: { subject: string; body: string }) => {
       if (!res) return;
-      this.data.centerSendMail({ centerIds, subject: res.subject, body: res.body }).subscribe({
+      this.data.studentSendMail({ studentIds, subject: res.subject, body: res.body }).subscribe({
         next: (r) => {
           const sent = Object.values(r).filter((v) => v.startsWith('SENT')).length;
-          this.snack.open(`Mail dispatched: ${sent}/${centerIds.length}`, 'OK', { duration: 3500 });
+          this.snack.open(`Mail dispatched: ${sent}/${studentIds.length}`, 'OK', { duration: 3500 });
           this.loadHistory();
         },
         error: (e) => this.snack.open(e?.error?.message || 'Send failed', 'OK', { duration: 3500 }),

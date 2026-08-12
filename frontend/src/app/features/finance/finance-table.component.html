@@ -128,6 +128,14 @@
           <th mat-header-cell *matHeaderCellDef>Status</th>
           <td mat-cell *matCellDef="let m"><span class="badge" [class.stub]="m.stub">{{ m.status }}</span></td>
         </ng-container>
+        <ng-container matColumnDef="del">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let m">
+            <button mat-icon-button color="warn" matTooltip="Delete entry" (click)="deleteMail(m); $event.stopPropagation()">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </td>
+        </ng-container>
         <tr mat-header-row *matHeaderRowDef="historyCols"></tr>
         <tr mat-row *matRowDef="let row; columns: historyCols" class="hist-row" (click)="openMail(row)"></tr>
       </table>

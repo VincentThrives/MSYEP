@@ -1,7 +1,7 @@
 package com.vincent.msyep.modules.center;
 
 import com.vincent.msyep.modules.finance.MailLog;
-import com.vincent.msyep.modules.finance.MailLogRepository;
+import com.vincent.msyep.modules.finance.MailLogService;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,8 +22,8 @@ import java.util.Optional;
 
 /**
  * Emails the Center Batch Approval PDF to a center. Auto-fires on center creation and from the
- * Center Mail page; every dispatch is recorded in the shared {@link MailLog} history (channel = CENTER).
- * When SMTP isn't configured it logs the intent so the flow works end-to-end before credentials.
+ * Center Mail page; every dispatch — with the actual PDF — is recorded in the shared history
+ * (channel = CENTER). Stub-safe when SMTP isn't configured.
  */
 @Service
 public class CenterMailService {
@@ -31,120 +31,119 @@ public class CenterMailService {
     private static final Logger log = LoggerFactory.getLogger(CenterMailService.class);
 
     private final CenterBatchApprovalPdfService batchApproval;
-    private final MailLogRepository mailLogs;
+    private final MailLogService mailLog;
     private final Optional<JavaMailSender> mailSender;
     private final String mailFrom;
 
     public CenterMailService(CenterBatchApprovalPdfService batchApproval,
-                             MailLogRepository mailLogs,
+                             MailLogService mailLog,
                              Optional<JavaMailSender> mailSender,
                              @Value("${spring.mail.username:}") String mailFrom) {
         this.batchApproval = batchApproval;
-        this.mailLogs = mailLogs;
+        this.mailLog = mailLog;
         this.mailSender = mailSender;
         this.mailFrom = mailFrom;
     }
 
     /** Send the Batch Approval PDF to a single center (auto on create, or per-row send) and log it. */
     public String sendDocuments(Center center) {
-        SendResult r = sendOne(center, null, null);
-        logBatch(List.of(center), List.of(r), null, null);
-        return r.note();
+        return sendToCenters(List.of(center), null, null)
+                .getOrDefault(center.getId(), "NO_EMAIL");
     }
 
-    /** Bulk send from the Center Mail page; records one history entry for the batch. */
+    /** Bulk send from the Center Mail page; records one history entry with the PDFs. */
     public Map<String, String> sendToCenters(List<Center> centers, String subject, String body) {
         Map<String, String> result = new LinkedHashMap<>();
+        List<String> names = new ArrayList<>();
+        List<String> ids = new ArrayList<>();
         List<SendResult> results = new ArrayList<>();
+        List<MailLogService.Att> files = new ArrayList<>();
         for (Center c : centers) {
-            SendResult r = sendOne(c, subject, body);
+            String who = firstNonBlank(c.getName(), c.getCode());
+            names.add(who);
+            ids.add(c.getId());
+            String to = firstNonBlank(c.getContactEmail(), c.getEmail());
+            if (!StringUtils.hasText(to)) { result.put(c.getId(), "NO_EMAIL"); results.add(new SendResult("", "NO_EMAIL", false)); continue; }
+            byte[] pdf;
+            try {
+                pdf = batchApproval.build(c.getId());
+            } catch (Exception e) {
+                result.put(c.getId(), "FAILED:" + e.getMessage());
+                results.add(new SendResult(to, "FAILED:" + e.getMessage(), false));
+                continue;
+            }
+            String subj = StringUtils.hasText(subject) ? subject : "KP-MSYEP Center Batch Approval — " + who;
+            String text = StringUtils.hasText(body) ? body
+                    : "Dear " + who + ",\n\nPlease find attached your KP-MSYEP Center Batch Approval document.\n\nRegards,\nYKTK · KP-MSYEP";
+            SendResult r = send(to, subj, text, pdf);
             result.put(c.getId(), r.token());
             results.add(r);
+            files.add(new MailLogService.Att("Batch Approval — " + who, pdf));
         }
-        logBatch(centers, results, subject, body);
+        saveLog(ids, names, results, subject, body, files);
         return result;
     }
 
     /** Sent-mail history for the Center wing. */
     public List<MailLog> history() {
-        return mailLogs.findTop100ByChannelOrderBySentAtDesc("CENTER");
+        return mailLog.history("CENTER");
     }
 
     // ------------------------------------------------------------------ internals
 
-    private record SendResult(String recipient, String token, String note, boolean stub) {}
+    private record SendResult(String recipient, String token, boolean stub) {}
 
-    private SendResult sendOne(Center center, String subject, String body) {
-        String to = firstNonBlank(center.getContactEmail(), center.getEmail());
-        String who = firstNonBlank(center.getName(), center.getCode());
-        if (!StringUtils.hasText(to)) {
-            return new SendResult("", "NO_EMAIL", "No center email on file — generated for download only.", false);
-        }
-        byte[] pdf;
-        try {
-            pdf = batchApproval.build(center.getId());
-        } catch (Exception e) {
-            log.warn("batch-approval build failed for {}: {}", center.getId(), e.getMessage());
-            return new SendResult(to, "FAILED:" + e.getMessage(), "PDF build failed: " + e.getMessage(), false);
-        }
-        String subj = StringUtils.hasText(subject) ? subject : "KP-MSYEP Center Batch Approval — " + who;
-        String text = StringUtils.hasText(body) ? body
-                : "Dear " + who + ",\n\nPlease find attached your KP-MSYEP Center Batch Approval document.\n\nRegards,\nYKTK · KP-MSYEP";
-
+    private SendResult send(String to, String subject, String text, byte[] pdf) {
         if (mailSender.isEmpty() || !StringUtils.hasText(mailFrom)) {
             log.info("Mail not configured — center batch approval ({} bytes) ready to email to {}", pdf.length, to);
-            return new SendResult(to, "SENT", "Mail not configured — would email to " + to + ".", true);
+            return new SendResult(to, "SENT", true);
         }
         try {
             MimeMessage msg = mailSender.get().createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(msg, true);
             helper.setFrom(mailFrom);
             helper.setTo(to);
-            helper.setSubject(subj);
+            helper.setSubject(subject);
             helper.setText(text);
             helper.addAttachment("Batch-Approval.pdf", new ByteArrayResource(pdf));
             mailSender.get().send(msg);
-            log.info("Center batch approval emailed to {}", to);
-            return new SendResult(to, "SENT", "Batch Approval emailed to " + to + ".", false);
+            return new SendResult(to, "SENT", false);
         } catch (Exception e) {
             log.warn("Center email failed for {}: {}", to, e.getMessage());
-            return new SendResult(to, "FAILED:" + e.getMessage(), "Email failed: " + e.getMessage(), false);
+            return new SendResult(to, "FAILED:" + e.getMessage(), false);
         }
     }
 
-    private void logBatch(List<Center> centers, List<SendResult> results, String subject, String body) {
+    private void saveLog(List<String> ids, List<String> names, List<SendResult> results,
+                         String subject, String body, List<MailLogService.Att> files) {
         try {
             LinkedHashSet<String> recipients = new LinkedHashSet<>();
-            List<String> names = new ArrayList<>();
-            List<String> ids = new ArrayList<>();
             Map<String, String> res = new LinkedHashMap<>();
             int sent = 0;
             boolean anyStub = false;
-            for (int i = 0; i < centers.size(); i++) {
-                Center c = centers.get(i);
+            for (int i = 0; i < ids.size(); i++) {
                 SendResult r = results.get(i);
-                names.add(firstNonBlank(c.getName(), c.getCode()));
-                ids.add(c.getId());
                 if (StringUtils.hasText(r.recipient())) recipients.add(r.recipient());
-                res.put(c.getId(), r.token());
+                res.put(ids.get(i), r.token());
                 if (r.token().startsWith("SENT")) sent++;
                 if (r.stub()) anyStub = true;
             }
-            int total = centers.size();
-            mailLogs.save(MailLog.builder()
+            int total = ids.size();
+            MailLog logEntry = MailLog.builder()
                     .channel("CENTER")
                     .sentAt(Instant.now())
                     .recipients(new ArrayList<>(recipients))
                     .subject(StringUtils.hasText(subject) ? subject : "KP-MSYEP Center Batch Approval")
                     .body(body)
-                    .studentIds(ids)
-                    .studentNames(names)
+                    .studentIds(new ArrayList<>(ids))
+                    .studentNames(new ArrayList<>(names))
                     .attachment("Batch-Approval.pdf")
                     .sent(sent).total(total)
                     .status((anyStub ? "stub — SMTP not configured · " : "") + sent + "/" + total + " sent")
                     .stub(anyStub)
                     .results(res)
-                    .build());
+                    .build();
+            mailLog.save(logEntry, files);
         } catch (Exception e) {
             log.warn("center mail-log save failed: {}", e.getMessage());
         }

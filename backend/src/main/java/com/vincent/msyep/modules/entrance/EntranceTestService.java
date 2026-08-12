@@ -59,17 +59,20 @@ public class EntranceTestService {
     private final EntranceAttemptRepository attempts;
     private final StudentRepository students;
     private final com.vincent.msyep.modules.notify.WhatsAppService whatsApp;
+    private final com.vincent.msyep.modules.student.StudentMailService studentMail;
     private final String uploadsDir;
     private final Random rnd = new Random();
 
     public EntranceTestService(QuestionBankRepository bank, EntranceAttemptRepository attempts,
                                StudentRepository students,
                                com.vincent.msyep.modules.notify.WhatsAppService whatsApp,
+                               com.vincent.msyep.modules.student.StudentMailService studentMail,
                                @Value("${app.uploads-dir:uploads}") String uploadsDir) {
         this.bank = bank;
         this.attempts = attempts;
         this.students = students;
         this.whatsApp = whatsApp;
+        this.studentMail = studentMail;
         this.uploadsDir = uploadsDir;
     }
 
@@ -246,6 +249,12 @@ public class EntranceTestService {
         attempt.setSubmittedAt(Instant.now());
         attempts.save(attempt);
         sendResultToWhatsApp(attempt);
+        // Auto-email the entrance result to the student's mail ID + record in Student mail history.
+        try {
+            studentMail.sendEntranceResult(attempt, resultPdf(attempt.getId()));
+        } catch (Exception e) {
+            log.warn("entrance result email hook failed for {}: {}", attempt.getStudentName(), e.getMessage());
+        }
         return toResult(attempt);
     }
 
