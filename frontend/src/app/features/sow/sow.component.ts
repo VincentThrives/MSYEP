@@ -211,7 +211,7 @@ export class SowComponent {
     });
   }
 
-  /** Download all saved SOW program files as a single ZIP. */
+  /** Download all saved SOW programs as ONE PDF — one program per page, full details + photos. */
   downloadAll(): void {
     this.saving.set(true);
     this.data.sowDownloadAll(this.centerId()).subscribe({
@@ -220,10 +220,10 @@ export class SowComponent {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'KP-MSYEP-SOW-Programs.zip';
+        a.download = 'KP-MSYEP-SOW-Programs.pdf';
         a.click();
         URL.revokeObjectURL(url);
-        this.snack.open('Downloaded all saved SOW program files (ZIP).', 'OK', { duration: 3500 });
+        this.snack.open('Downloaded all saved SOW programs as one PDF.', 'OK', { duration: 3500 });
       },
       error: (e) => this.fail(e),
     });

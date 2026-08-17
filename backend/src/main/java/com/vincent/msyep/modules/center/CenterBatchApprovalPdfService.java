@@ -70,12 +70,15 @@ public class CenterBatchApprovalPdfService {
 
     private final CenterRepository centers;
     private final ZoneRepository zones;
+    private final com.vincent.msyep.modules.admin.AdminSignatureService adminSignature;
     private final String uploadsDir;
 
     public CenterBatchApprovalPdfService(CenterRepository centers, ZoneRepository zones,
+                                         com.vincent.msyep.modules.admin.AdminSignatureService adminSignature,
                                          @Value("${app.uploads-dir:uploads}") String uploadsDir) {
         this.centers = centers;
         this.zones = zones;
+        this.adminSignature = adminSignature;
         this.uploadsDir = uploadsDir;
     }
 
@@ -89,7 +92,7 @@ public class CenterBatchApprovalPdfService {
         String today = LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
         String place = firstNonBlank(c.getLocality(), c.getGramPanchayat(), c.getTaluk(), c.getDistrict());
         byte[] principalSig = readCenterDoc(c, "principalSignature");
-        byte[] adminSig = readAdminSignature();
+        byte[] adminSig = adminSignature.get();   // central admin/giver signature (uploaded by admin, else default)
 
         // Print every page on the full YKTK letterhead (header + grey arc + footer). The static template
         // content is composited as transparent page-images so the letterhead arc shows through uncut;
@@ -98,7 +101,8 @@ public class CenterBatchApprovalPdfService {
         try (PdfDocument lh = new PdfDocument(new PdfReader(new ClassPathResource(LETTERHEAD).getInputStream()));
              PdfDocument dst = new PdfDocument(new PdfWriter(out))) {
 
-            PdfFormXObject letterhead = lh.getPage(1).copyAsFormXObject(dst);
+            // Flat opaque raster of the letterhead so its grey arc never composites over the content.
+            PdfImageXObject letterhead = new PdfImageXObject(ImageDataFactory.create(classpathBytes("cba-letterhead.png")));
             PdfFont bold = PdfFontFactory.createFont(StandardFonts.TIMES_BOLD);
             PdfFont reg = PdfFontFactory.createFont(StandardFonts.TIMES_ROMAN);
 
@@ -609,16 +613,6 @@ public class CenterBatchApprovalPdfService {
                     log.warn("center doc {} unreadable: {}", type, e.getMessage());
                 }
             }
-        }
-        return null;
-    }
-
-    private byte[] readAdminSignature() {
-        for (String name : new String[]{"approval-signature.png", "giver-signature.png"}) {
-            try {
-                Path p = Paths.get(uploadsDir, "system", name);
-                if (Files.exists(p)) return Files.readAllBytes(p);
-            } catch (Exception ignored) { }
         }
         return null;
     }

@@ -38,6 +38,16 @@ export class DataService {
   };
   removeApprovalSignature = () =>
     this.api.delete<{ approvalSignature: boolean }>('/franchise-settings/approval-signature');
+
+  /** Central admin/giver signature used on ALL generated PDFs. */
+  adminSignatureStatus = () => this.api.get<{ custom: boolean }>('/admin/signature/status');
+  adminSignatureImage = () => this.api.blob('/admin/signature');
+  uploadAdminSignature = (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return this.api.post<{ custom: boolean }>('/admin/signature', form);
+  };
+  resetAdminSignature = () => this.api.delete<{ custom: boolean }>('/admin/signature');
   uploadZoneDocument = (id: string, type: string, label: string, file: File) => {
     const form = new FormData();
     form.append('type', type);

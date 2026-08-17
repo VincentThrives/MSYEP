@@ -22,6 +22,7 @@ import com.itextpdf.kernel.pdf.canvas.parser.data.ImageRenderInfo;
 import com.itextpdf.kernel.pdf.canvas.parser.listener.IEventListener;
 import com.itextpdf.kernel.pdf.canvas.parser.listener.IPdfTextLocation;
 import com.itextpdf.kernel.pdf.canvas.parser.listener.RegexBasedLocationExtractionStrategy;
+import com.itextpdf.kernel.pdf.xobject.PdfFormXObject;
 import com.itextpdf.kernel.pdf.xobject.PdfImageXObject;
 import com.itextpdf.layout.Canvas;
 import com.itextpdf.layout.element.Image;
@@ -69,19 +70,23 @@ public class FranchisePdfService {
     /** Sample franchisee name printed on the template letterhead (p19) that we replace. */
     private static final String SAMPLE_NAME = "HARSHA COMPUTER EDUCATION";
     /**
-     * Pages to remove from the MOU (1-based): 21 & 22 = center/student login annexes,
-     * 27 = the franchise certificate (delivered as its own PDF), 47 = stray trailer.
+     * Pages to remove from the MOU (1-based): 19 = the sample "Franchisee" letterhead page,
+     * 21 & 22 = center/student login annexes, 27 = the franchise certificate (delivered as its
+     * own PDF), 47 = stray trailer.
      */
-    private static final int[] DELETE_PAGES = {21, 22, 27, 47};
+    private static final int[] DELETE_PAGES = {19, 21, 22, 27, 47};
     /** Pages whose embedded logo is replaced by the franchise logo (1-based, template numbering). */
     private static final int[] LOGO_PAGES = {17, 19, 23, 24, 25};
     /** Template page carrying the Franchisee Certificate (Annexure-10). */
     private static final int CERTIFICATE_PAGE = 27;
 
     private final String uploadsDir;
+    private final com.vincent.msyep.modules.admin.AdminSignatureService adminSignature;
 
-    public FranchisePdfService(@Value("${app.uploads-dir:uploads}") String uploadsDir) {
+    public FranchisePdfService(@Value("${app.uploads-dir:uploads}") String uploadsDir,
+                               com.vincent.msyep.modules.admin.AdminSignatureService adminSignature) {
         this.uploadsDir = uploadsDir;
+        this.adminSignature = adminSignature;
     }
 
     /** Personalised MOU bytes (unsigned). */
@@ -91,8 +96,9 @@ public class FranchisePdfService {
 
         byte[] logo = readZoneDoc(zone, "logo");
         byte[] sign = readZoneDoc(zone, "franchiseeSignature");
-        byte[] giver = readGiverSignature();
-        String franchiseeName = firstNonBlank(zone.getFranchiseeName(), zone.getOrganizationName(), zone.getName());
+        byte[] giver = adminSignature.get();
+        // Zone-head / authorised-signatory signature for the "Center Head — Signature with Seal" pages.
+        byte[] authSign = readZoneDoc(zone, "authorisedSignatorySignature");
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (PdfDocument pdf = new PdfDocument(new PdfReader(new ByteArrayInputStream(template)), new PdfWriter(out))) {
@@ -103,10 +109,8 @@ public class FranchisePdfService {
             }
 
             // Template pages shift after deletion — map original template page numbers to current ones.
-            // Only p1..p20 are before the first deletion (21), so they keep their numbers; p23/24/25
-            // shift down by 2 (pages 21 & 22 removed before them).
-            int p19 = 19;
-            int p23 = 23 - 2, p24 = 24 - 2, p25 = 25 - 2;
+            // Pages 19, 21 & 22 are removed before p23+, so those shift down by 3.
+            int p23 = 23 - 3, p24 = 24 - 3, p25 = 25 - 3;
 
             // The sample emblem is stripped from EVERY spot regardless of whether the zone uploaded a
             // logo — so it can never appear. When the zone has no logo we composite a transparent pixel,
@@ -117,32 +121,181 @@ public class FranchisePdfService {
             replaceP1Watermark(pdf, mark);
             overlayFirstPageData(pdf, 1, zone);
 
-            // 3) p19 — replace sample franchisee name with the real one.
-            if (StringUtils.hasText(franchiseeName)) replaceText(pdf, p19, SAMPLE_NAME, franchiseeName);
-
-            // 4) Logos — the template's franchise emblem sits at fixed, measured spots on each page.
-            int p26 = 26 - 2; // shifts down by 2 (pages 21 & 22 removed before it)
+            // 3) Logos — the template's franchise emblem sits at fixed, measured spots on each page.
+            int p26 = 26 - 3; // shifts down by 3 (pages 19, 21 & 22 removed before it)
             // p17 & p18 banners: the bundled banner images are already blank (sample emblem erased),
             // so we just composite each zone's own logo into them, then place the banner back.
             recreateBanner(pdf, 17, "banner-p17.png", new Rectangle(82, 377, 453, 225), mark,
                     1575, 32, 150, 150, 0, 0, 0);   // logo sits above the redrawn "Franchisee" label
             recreateBanner(pdf, 18, "banner-p18.png", new Rectangle(9, 366, 575, 223), mark,
                     678, 26, 184, 184, 0, 0, 0);
-            overlayLogoAt(pdf, p19, mark,
-                    new Rectangle(23, 784, 59, 59),      // top-left emblem
-                    new Rectangle(195, 335, 205, 198));  // centre watermark
             overlayLogoAt(pdf, p23, mark, new Rectangle(508, 763, 74, 74));
             overlayLogoAt(pdf, p24, mark, new Rectangle(67, 729, 74, 74));
             overlayLogoAt(pdf, p25, mark, new Rectangle(51, 738, 74, 74));
             overlayLogoAt(pdf, p26, mark, new Rectangle(59, 717, 74, 74));
 
-            // 5) Signatures — footer of every page + the p16 signature block.
+            // 4) Zone-head signature above the "Center Head" line on Annexure-7/8/9 (template p24/25/26).
+            overlaySignatureAt(pdf, p24, authSign, new Rectangle(360, 219, 150, 26));
+            overlaySignatureAt(pdf, p25, authSign, new Rectangle(445, 88, 135, 30));
+            overlaySignatureAt(pdf, p26, authSign, new Rectangle(390, 282, 140, 32));
+
+            // 4b) p16 — fill the Receiver (zone head) / Giver (YKTK) signature block.
+            byte[] receiverSign = (authSign != null) ? authSign : sign;
+            byte[] giverSign = (giver != null) ? giver : readAsset("sign-yktk.png");
+            fillSignatureBlock(pdf, 16, zone, receiverSign, giverSign);
+
+            // 5) Signatures — footer of every page.
             stampSignaturesAllPages(pdf, sign, giver);
 
         } catch (Exception e) {
             throw new IllegalStateException("Failed to build MOU: " + e.getMessage(), e);
         }
+        // 6) Strip the template's own MAHACHETHANA seal/watermark, then reframe every page INSIDE the
+        //    YKTK letterhead — so the document sits cleanly on the letter with no clashing old branding.
+        return reframeIntoLetterhead(stripSeals(out.toByteArray()));
+    }
+
+    // The old MAHACHETHANA SEVA TRUST seal ships in the template as small raster logos: a 117x113
+    // watermark on the cover and a 512x512 crest on the annexure pages. Everything else that is an
+    // image (centre-programme photos, scanned government letters) is genuine content we keep.
+    private static final int[][] SEAL_DIMS = { {117, 113}, {512, 512} };
+
+    private static boolean isSeal(int w, int h) {
+        for (int[] d : SEAL_DIMS) if (d[0] == w && d[1] == h) return true;
+        return false;
+    }
+
+    /**
+     * Blank the template's own seal/watermark images to transparent, in place, leaving all text,
+     * tables, photos and scanned letters untouched. Runs in stamping mode so the streams are writable.
+     */
+    private byte[] stripSeals(byte[] content) {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try {
+            // 1x1 fully-transparent PNG — a seal image swapped to this draws nothing, at any scale.
+            BufferedImage px = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+            ByteArrayOutputStream pngBuf = new ByteArrayOutputStream();
+            ImageIO.write(px, "png", pngBuf);
+            byte[] transparentPng = pngBuf.toByteArray();
+
+            try (PdfDocument doc = new PdfDocument(
+                    new PdfReader(new ByteArrayInputStream(content)), new PdfWriter(out))) {
+                for (int i = 1; i <= doc.getNumberOfPages(); i++) {
+                    PdfPage page = doc.getPage(i);
+                    stripSealsInResources(page.getResources().getPdfObject(), transparentPng);
+                    stripWhiteFills(page, doc);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("MOU seal strip failed: {}", e.getMessage());
+            return content;   // fall back to the un-stripped content rather than failing the download
+        }
         return out.toByteArray();
+    }
+
+    private void stripSealsInResources(PdfDictionary res, byte[] transparentPng) {
+        if (res == null) return;
+        PdfDictionary xobjects = res.getAsDictionary(PdfName.XObject);
+        if (xobjects == null) return;
+        for (PdfName key : xobjects.keySet()) {
+            PdfStream st = xobjects.getAsStream(key);
+            if (st == null) continue;
+            if (PdfName.Image.equals(st.getAsName(PdfName.Subtype))) {
+                Integer w = st.getAsInt(PdfName.Width), h = st.getAsInt(PdfName.Height);
+                if (w != null && h != null && isSeal(w, h)) blankImageStream(st, transparentPng);
+            } else {
+                stripSealsInResources(st.getAsDictionary(PdfName.Resources), transparentPng);   // nested form XObject
+            }
+        }
+    }
+
+    // Every template page (and the content forms nested inside it) paints opaque WHITE rectangles as
+    // backgrounds before the text/tables. Those white boxes block the letterhead's grey arc and — where
+    // a box's straight edge crosses the arc — chop it into a hard vertical cut. We neutralise the fill of
+    // every white rectangle (turn its `f`/`F`/`f*` into a no-op `n`), leaving the text, lines, borders and
+    // colours untouched, so the arc sweeps smoothly behind every page exactly like the cover.
+    private static final java.util.regex.Pattern WHITE_FILL = java.util.regex.Pattern.compile(
+            "(1 1 1 rg[\\s\\S]{0,150}?(?:[\\d.]+ [\\d.]+ [\\d.]+ [\\d.]+ re\\s+)+)[fF]\\*?\\b");
+
+    private byte[] neutralizeWhite(byte[] in) {
+        String s = new String(in, java.nio.charset.StandardCharsets.ISO_8859_1);
+        String o = WHITE_FILL.matcher(s).replaceAll("$1n");
+        return o.equals(s) ? null : o.getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
+    }
+
+    /** Neutralise white background fills in a page's content stream and every nested form XObject. */
+    private void stripWhiteFills(PdfPage page, PdfDocument doc) {
+        try {
+            byte[] nb = neutralizeWhite(page.getContentBytes());
+            if (nb != null) {
+                PdfStream ns = new PdfStream(nb);
+                ns.makeIndirect(doc);
+                page.getPdfObject().put(PdfName.Contents, ns);
+                page.getPdfObject().setModified();
+            }
+            stripWhiteInForms(page.getResources().getPdfObject());
+        } catch (Exception e) {
+            log.warn("MOU white-fill strip failed on a page: {}", e.getMessage());
+        }
+    }
+
+    private void stripWhiteInForms(PdfDictionary res) {
+        if (res == null) return;
+        PdfDictionary xobjects = res.getAsDictionary(PdfName.XObject);
+        if (xobjects == null) return;
+        for (PdfName key : xobjects.keySet()) {
+            PdfStream st = xobjects.getAsStream(key);
+            if (st == null || PdfName.Image.equals(st.getAsName(PdfName.Subtype))) continue;
+            byte[] nb = neutralizeWhite(st.getBytes());
+            if (nb != null) {
+                st.setData(nb);
+                st.setModified();
+            }
+            stripWhiteInForms(st.getAsDictionary(PdfName.Resources));   // recurse into nested forms
+        }
+    }
+
+    /** Overwrite an image stream in place with a 1x1 transparent image, keeping its object reference. */
+    private void blankImageStream(PdfStream st, byte[] transparentPng) {
+        PdfStream t = new PdfImageXObject(ImageDataFactory.create(transparentPng)).getPdfObject();
+        for (PdfName k : new java.util.ArrayList<>(st.keySet())) st.remove(k);
+        for (PdfName k : t.keySet()) st.put(k, t.get(k));
+        st.setData(t.getBytes(false), false);
+    }
+
+    private static final float LH_HEADER_H = 156f;
+    private static final float LH_FOOTER_H = 66f;
+
+    /**
+     * Place each built page's content — scaled and centred — into the safe band between the YKTK
+     * letterhead's peacock header and footer address, so the document sits cleanly inside the letter
+     * on every page (never overlapping the header or footer).
+     */
+    private byte[] reframeIntoLetterhead(byte[] content) {
+        ByteArrayOutputStream framed = new ByteArrayOutputStream();
+        try (PdfDocument src = new PdfDocument(new PdfReader(new ByteArrayInputStream(content)));
+             PdfDocument dst = new PdfDocument(new PdfWriter(framed))) {
+            // Flat, opaque raster of the letterhead — draws as a plain background so its grey arc stays a
+            // smooth curve and never composites over the content (the PDF letterhead's transparency did).
+            // Built once and reused on every page so the file doesn't balloon.
+            PdfImageXObject letterhead = new PdfImageXObject(ImageDataFactory.create(readAsset("cba-letterhead.png")));
+            Rectangle ps = src.getPage(1).getPageSize();
+            float w = ps.getWidth(), h = ps.getHeight();
+            float s = (h - LH_HEADER_H - LH_FOOTER_H) / h;   // fit content between header and footer
+            float tx = (w - w * s) / 2f, ty = LH_FOOTER_H;
+            int n = src.getNumberOfPages();
+            for (int i = 1; i <= n; i++) {
+                PdfFormXObject pageXo = src.getPage(i).copyAsFormXObject(dst);
+                PdfPage np = dst.addNewPage(new com.itextpdf.kernel.geom.PageSize(w, h));
+                PdfCanvas cv = new PdfCanvas(np);
+                cv.addXObjectFittedIntoRectangle(letterhead, new Rectangle(0, 0, w, h));   // opaque letterhead background (reused XObject)
+                cv.addXObjectFittedIntoRectangle(pageXo, new Rectangle(tx, ty, w * s, h * s));   // document content on top
+            }
+        } catch (Exception e) {
+            log.warn("MOU reframe failed: {}", e.getMessage());
+            return content;   // fall back to the un-framed content rather than failing the download
+        }
+        return framed.toByteArray();
     }
 
     /**
@@ -153,7 +306,7 @@ public class FranchisePdfService {
         byte[] template = readTemplate();
         if (template == null) throw new IllegalStateException("MOU template not bundled");
 
-        byte[] giver = readGiverSignature();
+        byte[] giver = adminSignature.get();
         String name = firstNonBlank(zone.getFranchiseeName(), zone.getOrganizationName(), zone.getName());
         String addr = firstNonBlank(zone.getFullAddress(), zone.getCity(), zone.getDistrict());
         // Issue date = the zone's creation date; validity = two years from it.
@@ -189,16 +342,23 @@ public class FranchisePdfService {
             // Drop the "Page 27 of 47" footer — this is now a standalone certificate.
             coverBox(canvas, new Rectangle(485, 30, 105, 20));
 
-            // Admin (giver) signature, placed just above "State Nodal Operator (sno) YKTK-KP-MSYEP" (y≈106).
-            if (giver != null) {
+            // Signature, placed just above "State Nodal Operator (sno) YKTK-KP-MSYEP" (y≈106).
+            // Prefer an explicit giver signature; otherwise use the YKTK signatory sign asset.
+            byte[] sigBytes = giver;
+            if (sigBytes == null) {
+                try (InputStream in = new ClassPathResource("sign-yktk.png").getInputStream()) {
+                    sigBytes = in.readAllBytes();
+                } catch (Exception ignore) { }
+            }
+            if (sigBytes != null) {
                 try {
-                    PdfImageXObject sig = new PdfImageXObject(ImageDataFactory.create(giver));
+                    PdfImageXObject sig = new PdfImageXObject(ImageDataFactory.create(sigBytes));
                     Rectangle fit = fitPreservingAspect(sig.getWidth(), sig.getHeight(), new Rectangle(365, 120, 175, 56));
                     canvas.saveState().setExtGState(opaqueState());
                     canvas.addXObjectFittedIntoRectangle(sig, fit);
                     canvas.restoreState();
                 } catch (Exception ex) {
-                    log.warn("certificate giver signature failed: {}", ex.getMessage());
+                    log.warn("certificate signature failed: {}", ex.getMessage());
                 }
             }
 
@@ -410,6 +570,63 @@ public class FranchisePdfService {
         }
     }
 
+    /**
+     * Fill the "Receiver / Giver" signature block (template p16): receiver = the zone head (uploaded
+     * signature + zone name/phone/company); giver = YKTK (fixed signature + phone/company).
+     */
+    private void fillSignatureBlock(PdfDocument pdf, int pageNum, Zone z, byte[] receiverSign, byte[] giverSign) {
+        if (pageNum < 1 || pageNum > pdf.getNumberOfPages()) return;
+        PdfPage page = pdf.getPage(pageNum);
+        // Signatures sit just above the "Receiver Signature/-" and "Giver Signature/-" labels.
+        overlaySignatureAt(pdf, pageNum, receiverSign, new Rectangle(45, 118, 135, 36));
+        overlaySignatureAt(pdf, pageNum, giverSign, new Rectangle(455, 118, 135, 36));
+        // Receiver = the zone head.
+        drawText(page, firstNonBlank(z.getFranchiseeName(), z.getOwnerName(), z.getName()), 90, 92, 9);
+        drawText(page, firstNonBlank(z.getContactPhone(), z.getContactNumber()), 135, 82, 9);
+        drawText(page, firstNonBlank(z.getName(), z.getOrganizationName()), 138, 72, 9);
+        // Giver = YKTK (phone + company fixed; name intentionally left blank).
+        drawText(page, "6366273089", 533, 82, 9);
+        drawText(page, "YKTK", 536, 72, 9);
+    }
+
+    /** Draw a short text string at an absolute baseline (Helvetica), opaque over the template. */
+    private void drawText(PdfPage page, String text, float x, float y, float size) {
+        if (!StringUtils.hasText(text)) return;
+        try {
+            PdfCanvas cv = new PdfCanvas(page);
+            cv.saveState().setExtGState(opaqueState()).beginText()
+                    .setFontAndSize(PdfFontFactory.createFont(), size)
+                    .moveText(x, y).showText(text).endText().restoreState();
+        } catch (Exception e) {
+            log.warn("MOU: text draw failed: {}", e.getMessage());
+        }
+    }
+
+    /** Read a bundled classpath asset (e.g. the YKTK giver signature) as bytes, or null. */
+    private byte[] readAsset(String name) {
+        try (InputStream in = new ClassPathResource(name).getInputStream()) {
+            return in.readAllBytes();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Draw the (aspect-preserved) authorised-signatory signature into a box, if one was uploaded. */
+    private void overlaySignatureAt(PdfDocument pdf, int pageNum, byte[] sig, Rectangle box) {
+        if (sig == null || pageNum < 1 || pageNum > pdf.getNumberOfPages()) return;
+        try {
+            PdfPage page = pdf.getPage(pageNum);
+            PdfImageXObject img = new PdfImageXObject(ImageDataFactory.create(sig));
+            Rectangle fit = fitPreservingAspect(img.getWidth(), img.getHeight(), box);
+            PdfCanvas canvas = new PdfCanvas(page);
+            canvas.saveState().setExtGState(opaqueState());
+            canvas.addXObjectFittedIntoRectangle(img, fit);
+            canvas.restoreState();
+        } catch (Exception e) {
+            log.warn("MOU: signature overlay failed on p{}: {}", pageNum, e.getMessage());
+        }
+    }
+
     /** Small franchisee + giver signature stamps in the bottom corners of every page. */
     private void stampSignaturesAllPages(PdfDocument pdf, byte[] sign, byte[] giver) {
         int n = pdf.getNumberOfPages();
@@ -479,15 +696,6 @@ public class FranchisePdfService {
                 .findFirst()
                 .map(d -> readFile(Paths.get(uploadsDir).resolve(d.getPath())))
                 .orElse(null);
-    }
-
-    /** The one-time giver (YKTK) signature asset, uploaded by an admin. */
-    private byte[] readGiverSignature() {
-        for (String name : new String[]{"giver-signature.png", "giver-signature.jpg", "giver-signature.jpeg"}) {
-            byte[] b = readFile(Paths.get(uploadsDir, "system", name));
-            if (b != null) return b;
-        }
-        return null;
     }
 
     private byte[] readFile(Path p) {

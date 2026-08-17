@@ -21,7 +21,8 @@ class CenterControllerScopeTest {
     void setUp() {
         service = mock(CenterService.class);
         registration = mock(CenterRegistrationService.class);
-        controller = new CenterController(service, registration);
+        controller = new CenterController(service, registration,
+                mock(CenterBatchApprovalPdfService.class), mock(CenterMailService.class));
     }
 
     private MsyepPrincipal principal(String role, String zoneId, String centerId) {

@@ -3,8 +3,8 @@
       <span class="spacer"></span>
       <button *ngIf="ready && view() === 'cards'" mat-flat-button color="primary"
         [disabled]="saving() || !filledPrograms().size" (click)="downloadAll()"
-        matTooltip="Download all saved SOW program files as one ZIP">
-        <mat-icon>download</mat-icon> Download all programs (ZIP)
+        matTooltip="Download all saved SOW programs as one PDF (one program per page)">
+        <mat-icon>download</mat-icon> Download all programs (PDF)
       </button>
       <button *ngIf="view() === 'form'" mat-stroked-button (click)="back()">
         <mat-icon>arrow_back</mat-icon> All Programs

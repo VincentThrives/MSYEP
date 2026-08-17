@@ -66,7 +66,7 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'Resource Person', path: '/app/resource-persons', icon: 'groups_2' },
   { label: 'Location', path: '/app/location', icon: 'place' },
   FINANCE_GROUP,
-  { label: 'Franchise Settings', path: '/app/franchise-settings', icon: 'draw' },
+  { label: 'Admin Signature', path: '/app/franchise-settings', icon: 'draw' },
   { label: 'Logins', path: '/app/users', icon: 'manage_accounts' },
 ];
 

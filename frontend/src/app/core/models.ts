@@ -289,6 +289,8 @@ export const ZONE_DOC_SLOTS: { type: string; label: string }[] = [
   { type: 'building', label: 'Building (Own / Rent) Copy' },
   // Used to build the Franchise Certificate + MOU. The "logo" slot above is the franchise logo.
   { type: 'franchiseeSignature', label: 'Franchisee Signature (for certificate & MOU)' },
+  // Zone-head / authorised-signatory sign — stamped above "Center Head — Signature with Seal" in the MOU.
+  { type: 'authorisedSignatorySignature', label: 'Authorised Signatory Signature (Zone Head)' },
 ];
 
 /** Territory granted per membership tier — mirrors the backend FranchiseTerms. */

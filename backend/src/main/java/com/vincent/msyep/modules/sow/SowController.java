@@ -57,16 +57,15 @@ public class SowController {
         return ApiResponse.ok("Program " + programIndex + " saved", saved);
     }
 
-    /** Download the one-page PDF; also emails it to the center's college mail-id. */
-    /** Download every saved SOW program for the center as a single ZIP. */
+    /** Download every saved SOW program as ONE PDF — one program per page, full details + photos. */
     @PostMapping("/download-all")
     public ResponseEntity<ByteArrayResource> downloadAll(@RequestParam(required = false) String centerId,
                                                          @AuthenticationPrincipal MsyepPrincipal p) {
-        byte[] zip = service.downloadAllZip(centerId(p, centerId));
+        byte[] pdf = service.allProgramsFullPdf(centerId(p, centerId));
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=KP-MSYEP-SOW-Programs.zip")
-                .contentType(MediaType.parseMediaType("application/zip"))
-                .body(new ByteArrayResource(zip));
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=KP-MSYEP-SOW-Programs.pdf")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(new ByteArrayResource(pdf));
     }
 
     @PostMapping("/{programIndex}/download")

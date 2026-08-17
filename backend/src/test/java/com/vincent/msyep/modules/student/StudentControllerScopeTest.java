@@ -22,7 +22,7 @@ class StudentControllerScopeTest {
         service = mock(StudentService.class);
         registration = mock(StudentRegistrationService.class);
         export = mock(StudentExportService.class);
-        controller = new StudentController(service, registration, export);
+        controller = new StudentController(service, registration, export, mock(StudentMailService.class));
         when(export.filter(any(), any(), any(), any(), any(), any(), any())).thenReturn(List.of());
     }
 

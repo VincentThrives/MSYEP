@@ -250,7 +250,7 @@ export class ZoneListComponent {
   }
 
   /** Documents that are mandatory to save a zone (branding for the certificate & MOU). */
-  readonly requiredDocs = ['logo', 'franchiseeSignature'];
+  readonly requiredDocs = ['logo', 'franchiseeSignature', 'authorisedSignatorySignature'];
   isRequiredDoc(type: string): boolean {
     return this.requiredDocs.includes(type);
   }
@@ -269,9 +269,14 @@ export class ZoneListComponent {
       this.snack.open('User ID and Password are required for the franchise login', 'OK', { duration: 3500 });
       return;
     }
-    // Logo + signature are strongly recommended (they brand the certificate & MOU) but not mandatory —
-    // a zone can be created without them and they can be uploaded later; the MOU just leaves those
-    // spots blank until then. Warn once, but don't block the sign-up.
+    // The Authorised Signatory (Zone Head) signature is REQUIRED — it signs the MOU annexures.
+    if (!this.form.id && !this.hasDoc('authorisedSignatorySignature')) {
+      this.snack.open('Authorised Signatory Signature (Zone Head) is required — upload it in the Documents step.',
+        'OK', { duration: 4500 });
+      return;
+    }
+    // Logo + franchisee signature are strongly recommended (they brand the certificate & MOU) but not
+    // mandatory — they can be uploaded later; the MOU just leaves those spots blank until then.
     if (!this.form.id && (!this.hasDoc('logo') || !this.hasDoc('franchiseeSignature'))) {
       this.snack.open('Tip: add the Organization Logo & Franchisee Signature (Documents tab) so the certificate & MOU are fully branded.',
         'OK', { duration: 4000 });

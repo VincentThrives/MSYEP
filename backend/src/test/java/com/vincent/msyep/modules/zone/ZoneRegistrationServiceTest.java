@@ -27,7 +27,7 @@ class ZoneRegistrationServiceTest {
         users = mock(UserRepository.class);
         counters = mock(CounterService.class);
         encoder = mock(PasswordEncoder.class);
-        svc = new ZoneRegistrationService(zones, users, counters, encoder);
+        svc = new ZoneRegistrationService(zones, users, counters, encoder, mock(FranchiseMailService.class));
         when(counters.next("zone")).thenReturn(1L);
         when(zones.save(any(Zone.class))).thenAnswer(i -> i.getArgument(0));
     }

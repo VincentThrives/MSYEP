@@ -179,6 +179,61 @@ public class SowService {
         List<SowSubmission> list = repo.findByCenterId(centerId);
         list.sort(java.util.Comparator.comparingInt(SowSubmission::getProgramIndex));
         if (list.isEmpty()) return null;
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        try (PdfDocument pdf = new PdfDocument(new PdfWriter(out))) {
+            applyLetterhead(pdf);
+            try (Document doc = new Document(pdf)) {
+                doc.setFont(PdfFontFactory.createFont(StandardFonts.TIMES_ROMAN));
+                doc.setMargins(HEADER_H + 12, 40, FOOTER_H + 12, 40);
+                doc.add(new Paragraph("KP-MSYEP — Statement of Work  ·  Program Photos")
+                        .setBold().setFontSize(14).setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
+                if (center != null) doc.add(new Paragraph(nz(center.getName()))
+                        .setFontSize(11).setTextAlignment(TextAlignment.CENTER).setMarginBottom(8));
+                // 4 programs per page: a 2-column grid of fixed-height cells auto-paginates 2 rows/page.
+                Table grid = new Table(UnitValue.createPercentArray(new float[]{1, 1})).useAllAvailableWidth();
+                for (SowSubmission s : list) grid.addCell(programCell(s));
+                if (list.size() % 2 == 1) grid.addCell(new Cell().setBorder(Border.NO_BORDER).setHeight(250));
+                doc.add(grid);
+            }
+        } catch (Exception e) {
+            log.warn("SOW all-programs compact failed: {}", e.getMessage());
+            return null;
+        }
+        return out.toByteArray();
+    }
+
+    /** One program as a compact bordered cell: title + a small grid of its photos (4 programs fit a page). */
+    private Cell programCell(SowSubmission s) {
+        Cell cell = new Cell().setBorder(new SolidBorder(0.8f)).setPadding(6).setHeight(250);
+        cell.add(new Paragraph("Program " + s.getProgramIndex())
+                .setBold().setFontSize(11).setTextAlignment(TextAlignment.CENTER).setMarginBottom(4));
+        Map<String, String> ph = s.getPhotos() == null ? Map.of() : s.getPhotos();
+        Table pg = new Table(2).useAllAvailableWidth();
+        int shown = 0;
+        for (Map.Entry<String, String> e : PHOTO_LABELS.entrySet()) {
+            if (shown >= 6) break;   // keep each cell compact so 4 programs fit one page
+            byte[] img = decode(ph.get(e.getKey()));
+            if (img == null) continue;
+            Cell pc = new Cell().setBorder(new SolidBorder(0.4f)).setPadding(2);
+            pc.add(new Paragraph(e.getValue()).setFontSize(6f).setMarginBottom(1));
+            try { Image im = new Image(ImageDataFactory.create(img)); im.setAutoScale(true); pc.add(im); }
+            catch (Exception ex) { continue; }
+            pg.addCell(pc);
+            shown++;
+        }
+        if (shown == 0) cell.add(new Paragraph("(no photos uploaded)").setFontSize(8).setItalic());
+        else { if (shown % 2 == 1) pg.addCell(new Cell().setBorder(Border.NO_BORDER)); cell.add(pg); }
+        return cell;
+    }
+
+    /** Every saved SOW program merged into ONE PDF — one program per page, with the full filled
+     *  details and photos (same layout as the single-program download). */
+    public byte[] allProgramsFullPdf(String centerId) {
+        Center center = centers.findById(centerId).orElse(null);
+        List<SowSubmission> list = repo.findByCenterId(centerId);
+        list.sort(java.util.Comparator.comparingInt(SowSubmission::getProgramIndex));
+        if (list.isEmpty())
+            throw new ResourceNotFoundException("No saved SOW programs to download for this center");
         java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
         int added = 0;
         try (PdfDocument dst = new PdfDocument(new PdfWriter(out))) {
@@ -190,13 +245,15 @@ public class SowService {
                     }
                     added++;
                 } catch (Exception ex) {
-                    log.warn("SOW merge: program {} skipped: {}", s.getProgramIndex(), ex.getMessage());
+                    log.warn("SOW full-merge: program {} skipped: {}", s.getProgramIndex(), ex.getMessage());
                 }
             }
         } catch (Exception e) {
             throw new IllegalStateException("Failed to merge SOW programs: " + e.getMessage());
         }
-        return added == 0 ? null : out.toByteArray();
+        if (added == 0)
+            throw new ResourceNotFoundException("No saved SOW programs to download for this center");
+        return out.toByteArray();
     }
 
     /** Build every saved SOW program for the center into a single ZIP. */
@@ -287,9 +344,12 @@ public class SowService {
 
     /** Draw the full YKTK letterhead page as the background of every page. */
     private void applyLetterhead(PdfDocument pdf) {
-        try (InputStream in = new ClassPathResource(LETTERHEAD).getInputStream();
-             PdfDocument lh = new PdfDocument(new PdfReader(in))) {
-            PdfFormXObject letterhead = lh.getPage(1).copyAsFormXObject(pdf);
+        try (InputStream in = new ClassPathResource("cba-letterhead.png").getInputStream()) {
+            // Flat, opaque raster of the letterhead — draws as a plain background so its grey arc never
+            // composites OVER the page content (photos). Page content is drawn on top of it. Built once
+            // and reused on every page so the file doesn't balloon.
+            com.itextpdf.kernel.pdf.xobject.PdfImageXObject letterhead =
+                    new com.itextpdf.kernel.pdf.xobject.PdfImageXObject(ImageDataFactory.create(in.readAllBytes()));
             pdf.addEventHandler(PdfDocumentEvent.END_PAGE, ev -> {
                 PdfPage page = ((PdfDocumentEvent) ev).getPage();
                 Rectangle p = page.getPageSize();
