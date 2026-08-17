@@ -144,8 +144,10 @@ public class FranchisePdfService {
             byte[] giverSign = (giver != null) ? giver : readAsset("sign-yktk.png");
             fillSignatureBlock(pdf, 16, zone, receiverSign, giverSign);
 
-            // 5) Signatures — footer of every page.
-            stampSignaturesAllPages(pdf, sign, giver);
+            // 5) Signatures — footer of every page: admin/giver bottom-left, zone head bottom-right
+            //    (falls back to the franchisee signature if no separate zone-head sign was uploaded).
+            byte[] zoneHead = (authSign != null) ? authSign : sign;
+            stampSignaturesAllPages(pdf, zoneHead, giver);
 
         } catch (Exception e) {
             throw new IllegalStateException("Failed to build MOU: " + e.getMessage(), e);
@@ -312,10 +314,11 @@ public class FranchisePdfService {
                     cv.addXObjectFittedIntoRectangle(letterhead, new Rectangle(0, 0, w, h));
                     cv.restoreState();
                 }
-                // Stamp a clean, correct page number bottom-right, just above the letterhead footer.
+                // Stamp a clean, correct page number bottom-centre (the bottom corners carry the
+                // giver + zone-head signatures), just above the letterhead footer.
                 String label = "Page " + i + " of " + n;
                 float fs = 9f;
-                float lx = w - tx - pageFont.getWidth(label, fs);   // right-aligned to the content's right edge
+                float lx = (w - pageFont.getWidth(label, fs)) / 2f;   // centred
                 drawBaseline(cv, pageFont, label, lx, LH_FOOTER_H + 8f, fs, w);
             }
         } catch (Exception e) {
@@ -666,8 +669,8 @@ public class FranchisePdfService {
         }
     }
 
-    /** Small franchisee + giver signature stamps in the bottom corners of every page. */
-    private void stampSignaturesAllPages(PdfDocument pdf, byte[] sign, byte[] giver) {
+    /** Small zone-head + giver signature stamps in the bottom corners of every page. */
+    private void stampSignaturesAllPages(PdfDocument pdf, byte[] zoneHead, byte[] giver) {
         int n = pdf.getNumberOfPages();
         for (int i = 1; i <= n; i++) {
             PdfPage page = pdf.getPage(i);
@@ -675,7 +678,7 @@ public class FranchisePdfService {
             try {
                 // Bottom corners, small, sitting below the page-number band (~y35) so they don't collide.
                 if (giver != null) footerStamp(page, giver, new Rectangle(34, 12, 66, 18), "Giver");
-                if (sign != null) footerStamp(page, sign, new Rectangle(w - 100, 12, 66, 18), "Franchisee");
+                if (zoneHead != null) footerStamp(page, zoneHead, new Rectangle(w - 100, 12, 66, 18), "Zone Head");
             } catch (Exception e) {
                 log.warn("MOU: footer stamp failed on p{}: {}", i, e.getMessage());
             }
