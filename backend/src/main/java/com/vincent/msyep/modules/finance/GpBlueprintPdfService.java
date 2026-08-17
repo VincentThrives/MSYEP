@@ -386,7 +386,7 @@ public class GpBlueprintPdfService {
     /** The central admin/giver signature (uploaded by the admin, else the bundled default), right-aligned. */
     private Image signature(float widthPt) {
         try {
-            byte[] bytes = adminSignature.get();
+            byte[] bytes = com.vincent.msyep.common.SignatureImage.clean(adminSignature.get());
             if (bytes == null) return null;
             Image im = new Image(ImageDataFactory.create(bytes));
             im.scaleToFit(widthPt, widthPt * 0.62f);
@@ -811,7 +811,7 @@ public class GpBlueprintPdfService {
     /** A letterhead-framed, flowing section: one block per student (data + certificate + photos). */
     private byte[] perStudentSection(List<Student> students, String today) {
         if (students.isEmpty()) return null;
-        byte[] adminSig = readAdminSignature();
+        byte[] adminSig = com.vincent.msyep.common.SignatureImage.clean(readAdminSignature());
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (PdfDocument pdf = new PdfDocument(new PdfWriter(out))) {
             PdfImageXObject letterhead = img("cba-letterhead.png");   // flat opaque letterhead — arc never composites over content

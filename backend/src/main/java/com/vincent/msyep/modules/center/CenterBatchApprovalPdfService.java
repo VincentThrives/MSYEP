@@ -91,8 +91,10 @@ public class CenterBatchApprovalPdfService {
         String mouTo = firstNonBlank(c.getMouEndDate(), zone != null ? zone.getValidTill() : null);
         String today = LocalDate.now().format(DateTimeFormatter.ofPattern("dd-MM-yyyy"));
         String place = firstNonBlank(c.getLocality(), c.getGramPanchayat(), c.getTaluk(), c.getDistrict());
-        byte[] principalSig = readCenterDoc(c, "principalSignature");
-        byte[] adminSig = adminSignature.get();   // central admin/giver signature (uploaded by admin, else default)
+        // Clean both signatures to transparent-background stamps (handles PDF / photo uploads) so they
+        // never paint a paper box over the approval.
+        byte[] principalSig = com.vincent.msyep.common.SignatureImage.clean(readCenterDoc(c, "principalSignature"));
+        byte[] adminSig = com.vincent.msyep.common.SignatureImage.clean(adminSignature.get());   // central admin/giver signature
 
         // Print every page on the full YKTK letterhead (header + grey arc + footer). The static template
         // content is composited as transparent page-images so the letterhead arc shows through uncut;

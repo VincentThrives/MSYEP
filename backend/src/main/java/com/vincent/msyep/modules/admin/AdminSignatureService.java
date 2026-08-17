@@ -7,10 +7,8 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.imageio.ImageIO;
-import java.awt.image.BufferedImage;
+import com.vincent.msyep.common.SignatureImage;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -62,19 +60,20 @@ public class AdminSignatureService {
         }
     }
 
-    /** Store a new admin signature: near-white pixels are made transparent and the image is trimmed to the ink. */
+    /**
+     * Store a new admin signature. The upload (image OR a scanned-signature PDF) is normalised to a
+     * transparent-background PNG — paper made transparent, trimmed to the ink — so the giver stamp never
+     * paints a box over any PDF it appears on.
+     */
     public void save(MultipartFile upload) {
         if (upload == null || upload.isEmpty()) throw new IllegalArgumentException("No file provided");
         if (upload.getSize() > 2 * 1024 * 1024) throw new IllegalArgumentException("File exceeds the 2 MB limit");
         try {
-            BufferedImage src = ImageIO.read(upload.getInputStream());
-            if (src == null) throw new IllegalArgumentException("Unsupported image file");
-            BufferedImage cleaned = cleanTrim(src, 235);
+            byte[] cleaned = SignatureImage.clean(upload.getBytes());
+            if (cleaned == null) throw new IllegalArgumentException("Unsupported or empty signature file");
             Path dir = Paths.get(uploadsDir, "system");
             Files.createDirectories(dir);
-            try (OutputStream os = Files.newOutputStream(dir.resolve(FILE))) {
-                ImageIO.write(cleaned, "png", os);
-            }
+            Files.write(dir.resolve(FILE), cleaned);
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
@@ -87,27 +86,4 @@ public class AdminSignatureService {
         try { Files.deleteIfExists(file()); } catch (Exception e) { log.warn("signature reset failed: {}", e.getMessage()); }
     }
 
-    /** Make near-white pixels transparent and crop to the ink bounding box (so any photo of a sign works). */
-    private static BufferedImage cleanTrim(BufferedImage in, int whiteThresh) {
-        int w = in.getWidth(), h = in.getHeight();
-        BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-        int minX = w, minY = h, maxX = -1, maxY = -1;
-        for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) {
-            int argb = in.getRGB(x, y);
-            int a = (argb >>> 24) & 0xFF, r = (argb >> 16) & 0xFF, g = (argb >> 8) & 0xFF, b = argb & 0xFF;
-            boolean bg = a < 24 || (r >= whiteThresh && g >= whiteThresh && b >= whiteThresh);
-            if (bg) {
-                out.setRGB(x, y, 0x00000000);
-            } else {
-                out.setRGB(x, y, argb);
-                if (x < minX) minX = x; if (x > maxX) maxX = x;
-                if (y < minY) minY = y; if (y > maxY) maxY = y;
-            }
-        }
-        if (maxX < 0) return out;   // fully blank — keep as-is
-        int pad = 6;
-        minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
-        maxX = Math.min(w - 1, maxX + pad); maxY = Math.min(h - 1, maxY + pad);
-        return out.getSubimage(minX, minY, maxX - minX + 1, maxY - minY + 1);
-    }
 }
