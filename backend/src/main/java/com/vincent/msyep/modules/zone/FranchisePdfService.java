@@ -101,6 +101,7 @@ public class FranchisePdfService {
         // for zones uploaded before the two signature fields were merged into one.
         byte[] zoneSign = readZoneDoc(zone, "authorisedSignatorySignature");
         if (zoneSign == null) zoneSign = readZoneDoc(zone, "franchiseeSignature");
+        zoneSign = normalizeSignature(zoneSign);   // handle PDF uploads + drop the paper background
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (PdfDocument pdf = new PdfDocument(new PdfReader(new ByteArrayInputStream(template)), new PdfWriter(out))) {
@@ -650,6 +651,102 @@ public class FranchisePdfService {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /**
+     * Turn a signature upload into clean, drawable PNG bytes. Franchisees often upload a scanned sign
+     * as a PDF (which {@link ImageDataFactory} cannot read) — pull the embedded image out of it. Then,
+     * for any signature, make the light paper background transparent and trim to the ink so it sits
+     * cleanly in the MOU signature boxes and footer instead of a grey rectangle. Returns null if empty.
+     */
+    private byte[] normalizeSignature(byte[] bytes) {
+        if (bytes == null || bytes.length < 5) return bytes;
+        boolean isPdf = bytes[0] == '%' && bytes[1] == 'P' && bytes[2] == 'D' && bytes[3] == 'F';
+        byte[] imageBytes = isPdf ? extractLargestImage(bytes) : bytes;
+        if (imageBytes == null) return null;
+        try {
+            BufferedImage src = ImageIO.read(new ByteArrayInputStream(imageBytes));
+            if (src == null) return imageBytes;   // not a raster we can clean — use as-is
+            // Paper on these scans sits around luminance 110-120 and the ink at 0-90, so 100 separates
+            // them cleanly. Downscale afterwards — the stamp is tiny, and it is re-embedded on every page.
+            BufferedImage cleaned = downscaleSignature(cleanTrimSignature(src, 100), 500);
+            ByteArrayOutputStream bo = new ByteArrayOutputStream();
+            ImageIO.write(cleaned, "png", bo);
+            return bo.toByteArray();
+        } catch (Exception e) {
+            log.warn("MOU: signature normalise failed: {}", e.getMessage());
+            return imageBytes;
+        }
+    }
+
+    /** Pull the largest embedded raster image out of a (signature) PDF as PNG bytes, or null. */
+    private byte[] extractLargestImage(byte[] pdfBytes) {
+        try (PdfDocument doc = new PdfDocument(new PdfReader(new ByteArrayInputStream(pdfBytes)))) {
+            byte[][] best = { null };
+            long[] bestArea = { -1 };
+            for (int i = 1; i <= doc.getNumberOfPages(); i++) {
+                collectImages(doc.getPage(i).getResources().getPdfObject(), best, bestArea);
+            }
+            return best[0];
+        } catch (Exception e) {
+            log.warn("MOU: signature PDF image extract failed: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private void collectImages(PdfDictionary res, byte[][] best, long[] bestArea) {
+        if (res == null) return;
+        PdfDictionary xo = res.getAsDictionary(PdfName.XObject);
+        if (xo == null) return;
+        for (PdfName k : xo.keySet()) {
+            PdfStream st = xo.getAsStream(k);
+            if (st == null) continue;
+            if (PdfName.Image.equals(st.getAsName(PdfName.Subtype))) {
+                try {
+                    PdfImageXObject img = new PdfImageXObject(st);
+                    long area = (long) img.getWidth() * (long) img.getHeight();
+                    if (area > bestArea[0]) { bestArea[0] = area; best[0] = img.getImageBytes(); }
+                } catch (Exception ignore) { /* skip unreadable image */ }
+            } else {
+                collectImages(st.getAsDictionary(PdfName.Resources), best, bestArea);
+            }
+        }
+    }
+
+    /** Downscale to a max width (signature stamps are small and get re-embedded on every page). */
+    private static BufferedImage downscaleSignature(BufferedImage in, int maxW) {
+        if (in.getWidth() <= maxW) return in;
+        int w = maxW, h = Math.max(1, in.getHeight() * maxW / in.getWidth());
+        BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = out.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.drawImage(in, 0, 0, w, h, null);
+        g.dispose();
+        return out;
+    }
+
+    /** Make light (paper) pixels transparent by luminance and crop to the ink bounding box. */
+    private static BufferedImage cleanTrimSignature(BufferedImage in, int lumThresh) {
+        int w = in.getWidth(), h = in.getHeight();
+        BufferedImage out = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        int minX = w, minY = h, maxX = -1, maxY = -1;
+        for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) {
+            int argb = in.getRGB(x, y);
+            int a = (argb >>> 24) & 0xFF, r = (argb >> 16) & 0xFF, g = (argb >> 8) & 0xFF, b = argb & 0xFF;
+            int lum = (r * 299 + g * 587 + b * 114) / 1000;
+            if (a < 24 || lum >= lumThresh) {
+                out.setRGB(x, y, 0x00000000);   // paper / transparent
+            } else {
+                out.setRGB(x, y, 0xFF000000 | (argb & 0xFFFFFF));   // keep ink (force opaque)
+                if (x < minX) minX = x; if (x > maxX) maxX = x;
+                if (y < minY) minY = y; if (y > maxY) maxY = y;
+            }
+        }
+        if (maxX < 0) return out;   // fully blank — keep as-is
+        int pad = 6;
+        minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
+        maxX = Math.min(w - 1, maxX + pad); maxY = Math.min(h - 1, maxY + pad);
+        return out.getSubimage(minX, minY, maxX - minX + 1, maxY - minY + 1);
     }
 
     /** Draw the (aspect-preserved) authorised-signatory signature into a box, if one was uploaded. */
