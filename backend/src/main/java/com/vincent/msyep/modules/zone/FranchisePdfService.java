@@ -284,18 +284,57 @@ public class FranchisePdfService {
             float s = (h - LH_HEADER_H - LH_FOOTER_H) / h;   // fit content between header and footer
             float tx = (w - w * s) / 2f, ty = LH_FOOTER_H;
             int n = src.getNumberOfPages();
+            PdfFont pageFont = PdfFontFactory.createFont(StandardFonts.HELVETICA);
             for (int i = 1; i <= n; i++) {
+                // Locate the template's stale "Page X of 47" footer on the source page (if present).
+                Rectangle old = findPageNumber(src.getPage(i));
+
                 PdfFormXObject pageXo = src.getPage(i).copyAsFormXObject(dst);
                 PdfPage np = dst.addNewPage(new com.itextpdf.kernel.geom.PageSize(w, h));
                 PdfCanvas cv = new PdfCanvas(np);
                 cv.addXObjectFittedIntoRectangle(letterhead, new Rectangle(0, 0, w, h));   // opaque letterhead background (reused XObject)
                 cv.addXObjectFittedIntoRectangle(pageXo, new Rectangle(tx, ty, w * s, h * s));   // document content on top
+
+                // Erase the old page number by repainting the letterhead over just its spot — an opaque
+                // image draw, so it always covers cleanly and matches the background exactly. The source
+                // page may be a different size (scanned annexes), so map with that page's own fit scale.
+                if (old != null) {
+                    Rectangle pps = src.getPage(i).getPageSize();
+                    float sx = (w * s) / pps.getWidth(), sy = (h * s) / pps.getHeight();
+                    // The old number is right-aligned in the footer, so erase from just left of it all the
+                    // way to the content's right edge, with generous vertical margin for ascenders.
+                    float bx = tx + old.getX() * sx - 8;
+                    float by = ty + old.getY() * sy - 8;
+                    float bw = (w - tx + 6) - bx;
+                    float bh = old.getHeight() * sy + 24;
+                    cv.saveState();
+                    cv.rectangle(bx, by, bw, bh).clip().endPath();
+                    cv.addXObjectFittedIntoRectangle(letterhead, new Rectangle(0, 0, w, h));
+                    cv.restoreState();
+                }
+                // Stamp a clean, correct page number bottom-right, just above the letterhead footer.
+                String label = "Page " + i + " of " + n;
+                float fs = 9f;
+                float lx = w - tx - pageFont.getWidth(label, fs);   // right-aligned to the content's right edge
+                drawBaseline(cv, pageFont, label, lx, LH_FOOTER_H + 8f, fs, w);
             }
         } catch (Exception e) {
             log.warn("MOU reframe failed: {}", e.getMessage());
             return content;   // fall back to the un-framed content rather than failing the download
         }
         return framed.toByteArray();
+    }
+
+    /** Locate the template's "Page N of M" footer on a source page, or null if it has none. */
+    private Rectangle findPageNumber(PdfPage page) {
+        try {
+            var strategy = new RegexBasedLocationExtractionStrategy("Page\\s+\\d+\\s+of\\s+\\d+");
+            new PdfCanvasProcessor(strategy).processPageContent(page);
+            for (IPdfTextLocation hit : strategy.getResultantLocations()) return hit.getRectangle();
+        } catch (Exception e) {
+            log.debug("page-number scan failed: {}", e.getMessage());
+        }
+        return null;
     }
 
     /**
