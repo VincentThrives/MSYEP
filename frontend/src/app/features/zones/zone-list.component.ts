@@ -138,7 +138,7 @@ export class ZoneListComponent {
       case 'kyc':
         // Logo + signature are mandatory — they brand every certificate & MOU.
         return [this.has(f.aadhaarNumber), this.has(f.panNumber), this.has(f.bankAccountDetails),
-          this.hasDoc('logo'), this.hasDoc('franchiseeSignature')];
+          this.hasDoc('logo'), this.hasDoc('authorisedSignatorySignature')];
       case 'fit':
         return [this.has(f.investmentCapacity), this.has(f.preferredLocation),
           this.has(f.spaceOwnership), this.has(f.spaceSqft), this.has(f.startTimeline)];
@@ -250,7 +250,7 @@ export class ZoneListComponent {
   }
 
   /** Documents that are mandatory to save a zone (branding for the certificate & MOU). */
-  readonly requiredDocs = ['logo', 'franchiseeSignature', 'authorisedSignatorySignature'];
+  readonly requiredDocs = ['logo', 'authorisedSignatorySignature'];
   isRequiredDoc(type: string): boolean {
     return this.requiredDocs.includes(type);
   }
@@ -275,10 +275,10 @@ export class ZoneListComponent {
         'OK', { duration: 4500 });
       return;
     }
-    // Logo + franchisee signature are strongly recommended (they brand the certificate & MOU) but not
-    // mandatory — they can be uploaded later; the MOU just leaves those spots blank until then.
-    if (!this.form.id && (!this.hasDoc('logo') || !this.hasDoc('franchiseeSignature'))) {
-      this.snack.open('Tip: add the Organization Logo & Franchisee Signature (Documents tab) so the certificate & MOU are fully branded.',
+    // Logo is strongly recommended (it brands the certificate & MOU) but not mandatory — it can be
+    // uploaded later; the MOU just leaves that spot blank until then.
+    if (!this.form.id && !this.hasDoc('logo')) {
+      this.snack.open('Tip: add the Organization Logo (Documents tab) so the certificate & MOU are fully branded.',
         'OK', { duration: 4000 });
     }
     if (!this.form.id && !this.form.tcAccepted) {

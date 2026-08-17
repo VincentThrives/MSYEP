@@ -95,10 +95,12 @@ public class FranchisePdfService {
         if (template == null) throw new IllegalStateException("MOU template not bundled");
 
         byte[] logo = readZoneDoc(zone, "logo");
-        byte[] sign = readZoneDoc(zone, "franchiseeSignature");
         byte[] giver = adminSignature.get();
-        // Zone-head / authorised-signatory signature for the "Center Head — Signature with Seal" pages.
-        byte[] authSign = readZoneDoc(zone, "authorisedSignatorySignature");
+        // Single zone signature (the authorised signatory / zone head) — used for the receiver block,
+        // the "Center Head" annexes and the footer. Falls back to the legacy franchisee-signature slot
+        // for zones uploaded before the two signature fields were merged into one.
+        byte[] zoneSign = readZoneDoc(zone, "authorisedSignatorySignature");
+        if (zoneSign == null) zoneSign = readZoneDoc(zone, "franchiseeSignature");
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (PdfDocument pdf = new PdfDocument(new PdfReader(new ByteArrayInputStream(template)), new PdfWriter(out))) {
@@ -135,19 +137,16 @@ public class FranchisePdfService {
             overlayLogoAt(pdf, p26, mark, new Rectangle(59, 717, 74, 74));
 
             // 4) Zone-head signature above the "Center Head" line on Annexure-7/8/9 (template p24/25/26).
-            overlaySignatureAt(pdf, p24, authSign, new Rectangle(360, 219, 150, 26));
-            overlaySignatureAt(pdf, p25, authSign, new Rectangle(445, 88, 135, 30));
-            overlaySignatureAt(pdf, p26, authSign, new Rectangle(390, 282, 140, 32));
+            overlaySignatureAt(pdf, p24, zoneSign, new Rectangle(360, 219, 150, 26));
+            overlaySignatureAt(pdf, p25, zoneSign, new Rectangle(445, 88, 135, 30));
+            overlaySignatureAt(pdf, p26, zoneSign, new Rectangle(390, 282, 140, 32));
 
             // 4b) p16 — fill the Receiver (zone head) / Giver (YKTK) signature block.
-            byte[] receiverSign = (authSign != null) ? authSign : sign;
             byte[] giverSign = (giver != null) ? giver : readAsset("sign-yktk.png");
-            fillSignatureBlock(pdf, 16, zone, receiverSign, giverSign);
+            fillSignatureBlock(pdf, 16, zone, zoneSign, giverSign);
 
-            // 5) Signatures — footer of every page: admin/giver bottom-left, zone head bottom-right
-            //    (falls back to the franchisee signature if no separate zone-head sign was uploaded).
-            byte[] zoneHead = (authSign != null) ? authSign : sign;
-            stampSignaturesAllPages(pdf, zoneHead, giver);
+            // 5) Signatures — footer of every page: admin/giver bottom-left, zone head bottom-right.
+            stampSignaturesAllPages(pdf, zoneSign, giver);
 
         } catch (Exception e) {
             throw new IllegalStateException("Failed to build MOU: " + e.getMessage(), e);
