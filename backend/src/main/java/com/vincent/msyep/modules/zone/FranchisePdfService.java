@@ -305,12 +305,14 @@ public class FranchisePdfService {
                 if (old != null) {
                     Rectangle pps = src.getPage(i).getPageSize();
                     float sx = (w * s) / pps.getWidth(), sy = (h * s) / pps.getHeight();
-                    // The old number is right-aligned in the footer, so erase from just left of it all the
-                    // way to the content's right edge, with generous vertical margin for ascenders.
-                    float bx = tx + old.getX() * sx - 8;
-                    float by = ty + old.getY() * sy - 8;
-                    float bw = (w - tx + 6) - bx;
-                    float bh = old.getHeight() * sy + 24;
+                    // Wrap ONLY the old number's own glyph box (mapped with the page's fit scale) plus a
+                    // small margin. A tight box is important on pages like the MOU signature block, where
+                    // the "Company Name" line sits just above the old footer number — an over-tall box
+                    // would clip it.
+                    float bx = tx + old.getX() * sx - 4;
+                    float by = ty + old.getY() * sy - 4;
+                    float bw = old.getWidth() * sx + 8;
+                    float bh = old.getHeight() * sy + 8;
                     cv.saveState();
                     cv.rectangle(bx, by, bw, bh).clip().endPath();
                     cv.addXObjectFittedIntoRectangle(letterhead, new Rectangle(0, 0, w, h));
