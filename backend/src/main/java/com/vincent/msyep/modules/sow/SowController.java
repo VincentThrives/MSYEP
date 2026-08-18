@@ -63,7 +63,7 @@ public class SowController {
                                                          @AuthenticationPrincipal MsyepPrincipal p) {
         byte[] pdf = service.allProgramsFullPdf(centerId(p, centerId));
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=KP-MSYEP-SOW-Programs.pdf")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=KP-MSYEP-Training-Program.pdf")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(new ByteArrayResource(pdf));
     }
@@ -74,7 +74,7 @@ public class SowController {
                                                       @AuthenticationPrincipal MsyepPrincipal p) {
         SowService.DownloadResult r = service.downloadAndEmail(centerId(p, centerId), programIndex);
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=SOW-Program-" + programIndex + ".pdf")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=KP-MSYEP-Training-Program-" + programIndex + ".pdf")
                 .header("X-Sow-Note", r.note())
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(new ByteArrayResource(r.pdf()));

@@ -153,10 +153,10 @@ public class SowService {
                 MimeMessageHelper helper = new MimeMessageHelper(msg, true);
                 helper.setFrom(mailFrom);
                 helper.setTo(email);
-                helper.setSubject("KP-MSYEP SOW — Program " + programIndex
+                helper.setSubject("KP-MSYEP Training Program " + programIndex
                         + (center != null ? " — " + nz(center.getName()) : ""));
-                helper.setText("Please find attached the KP-MSYEP SOW form for Program " + programIndex + ".\n\nRegards,\nMSYEP");
-                helper.addAttachment("SOW-Program-" + programIndex + ".pdf", new ByteArrayResource(pdf));
+                helper.setText("Please find attached the KP-MSYEP Training Program " + programIndex + ".\n\nRegards,\nMSYEP");
+                helper.addAttachment("KP-MSYEP-Training-Program-" + programIndex + ".pdf", new ByteArrayResource(pdf));
                 mailSender.get().send(msg);
                 emailed = true;
                 note = "PDF emailed to " + email;
@@ -272,7 +272,7 @@ public class SowService {
             for (SowSubmission s : list) {
                 try {
                     byte[] pdf = buildPdf(s, center);
-                    zip.putNextEntry(new java.util.zip.ZipEntry("SOW-Program-" + s.getProgramIndex() + ".pdf"));
+                    zip.putNextEntry(new java.util.zip.ZipEntry("KP-MSYEP-Training-Program-" + s.getProgramIndex() + ".pdf"));
                     zip.write(pdf);
                     zip.closeEntry();
                     added++;
@@ -306,13 +306,14 @@ public class SowService {
                         .setBackgroundColor(GREEN)
                         .setBorderRadius(new com.itextpdf.layout.properties.BorderRadius(UnitValue.createPointValue(6)))
                         .setPaddingTop(7).setPaddingBottom(7).setMarginBottom(9);
-                banner.add(new Paragraph("KP-MSYEP  ·  Statement of Work")
+                banner.add(new Paragraph("KP-MSYEP Training Program " + s.getProgramIndex())
                         .setBold().setFontSize(15).setFontColor(WHITE)
                         .setTextAlignment(TextAlignment.CENTER).setMargin(0).setMultipliedLeading(1f));
-                banner.add(new Paragraph("Program " + s.getProgramIndex()
-                        + (center != null ? "   ·   " + nz(center.getName()) : ""))
-                        .setFontSize(10.5f).setFontColor(new com.itextpdf.kernel.colors.DeviceRgb(224, 240, 230))
-                        .setTextAlignment(TextAlignment.CENTER).setMargin(0).setMarginTop(2).setMultipliedLeading(1f));
+                if (center != null && StringUtils.hasText(center.getName())) {
+                    banner.add(new Paragraph(nz(center.getName()))
+                            .setFontSize(10.5f).setFontColor(new com.itextpdf.kernel.colors.DeviceRgb(224, 240, 230))
+                            .setTextAlignment(TextAlignment.CENTER).setMargin(0).setMarginTop(2).setMultipliedLeading(1f));
+                }
                 doc.add(banner);
 
                 // ---- One-page photo gallery: every uploaded photo as a captioned card ----
