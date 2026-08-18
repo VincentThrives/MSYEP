@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog, MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 
 import { DataService } from '../../core/data.service';
 import { AuthService } from '../../core/auth.service';
@@ -21,7 +22,7 @@ interface PersonField { key: string; label: string; question?: boolean; opinion?
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatFormFieldModule, MatInputModule, MatSelectModule,
-    MatButtonModule, MatIconModule, MatSnackBarModule, MatTooltipModule, SearchSelectComponent,
+    MatButtonModule, MatIconModule, MatSnackBarModule, MatTooltipModule, MatDialogModule, SearchSelectComponent,
   ],
   templateUrl: './sow.component.html',
   styleUrl: './sow.component.scss',
@@ -173,13 +174,17 @@ export class SowComponent {
     delete this.photos[key];
   }
 
-  /** Full-screen preview of a photo (click a thumbnail to open, click/Esc to close). */
-  lightboxSrc: string | null = null;
+  private dialog = inject(MatDialog);
+  /** Open a photo full-size in a dialog (renders above the app shell / side nav). */
   openLightbox(src: string | undefined): void {
-    if (src) this.lightboxSrc = src;
-  }
-  closeLightbox(): void {
-    this.lightboxSrc = null;
+    if (!src) return;
+    this.dialog.open(PhotoDialogComponent, {
+      data: src,
+      panelClass: 'photo-dialog',
+      maxWidth: '98vw',
+      maxHeight: '98vh',
+      autoFocus: false,
+    });
   }
 
   private payload() {
@@ -244,4 +249,28 @@ export class SowComponent {
     this.saving.set(false);
     this.snack.open(e?.error?.message || 'Could not save', 'OK', { duration: 3500 });
   }
+}
+
+/** Full-size photo viewer shown in a MatDialog (CDK overlay → always above the shell + side nav). */
+@Component({
+  selector: 'app-photo-dialog',
+  standalone: true,
+  imports: [MatIconModule, MatButtonModule],
+  template: `
+    <div class="pv">
+      <button mat-icon-button class="x" (click)="ref.close()" aria-label="Close">
+        <mat-icon>close</mat-icon>
+      </button>
+      <img [src]="data" alt="Full photo" (click)="ref.close()" />
+    </div>
+  `,
+  styles: [`
+    .pv { position: relative; line-height: 0; }
+    img { display: block; max-width: min(94vw, 1200px); max-height: 88vh; object-fit: contain; cursor: zoom-out; border-radius: 4px; }
+    .x { position: absolute; top: -10px; right: -10px; background: rgba(0,0,0,.65); color: #fff; }
+  `],
+})
+export class PhotoDialogComponent {
+  ref = inject(MatDialogRef<PhotoDialogComponent>);
+  data = inject<string>(MAT_DIALOG_DATA);
 }

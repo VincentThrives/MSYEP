@@ -120,11 +120,3 @@
         </div>
       </div>
     </ng-template>
-
-<!-- Full-photo lightbox: click any photo thumbnail to see the complete image. -->
-<div class="lightbox" *ngIf="lightboxSrc" (click)="closeLightbox()">
-  <button mat-icon-button class="lb-close" type="button" (click)="closeLightbox()">
-    <mat-icon>close</mat-icon>
-  </button>
-  <img [src]="lightboxSrc" alt="Full photo" (click)="$event.stopPropagation()" />
-</div>

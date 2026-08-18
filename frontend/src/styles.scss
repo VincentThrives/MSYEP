@@ -130,3 +130,14 @@ h1 { color: var(--green-deep); }
 .mat-mdc-snack-bar-container .mdc-snackbar__surface { border-left: 4px solid var(--gold); }
 
 .full-width { width: 100%; }
+
+/* SOW full-photo viewer dialog: transparent surface so only the photo shows, with room for the
+   close button to sit just outside the image corner. */
+.photo-dialog {
+  .mat-mdc-dialog-surface {
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+    border-radius: 0;
+  }
+}
