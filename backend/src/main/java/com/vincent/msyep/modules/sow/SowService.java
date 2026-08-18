@@ -51,6 +51,11 @@ public class SowService {
     private static final String LETTERHEAD = "cba-letterhead.pdf";
     private static final float HEADER_H = 156f;
     private static final float FOOTER_H = 66f;
+    // Content margins for the gallery page. The letterhead header ink ends ~133pt from the top, so the
+    // heading sits just below it; side margins are tight so the cards use the full page width.
+    private static final float MARGIN_TOP = 140f;
+    private static final float MARGIN_SIDE = 28f;
+    private static final float MARGIN_BOTTOM = FOOTER_H + 10f;
 
     /** Ordered text fields → labels for the PDF. */
     private static final Map<String, String> TEXT_LABELS = new LinkedHashMap<>();
@@ -294,7 +299,7 @@ public class SowService {
 
             try (Document doc = new Document(pdf)) {
                 doc.setFont(PdfFontFactory.createFont(StandardFonts.TIMES_ROMAN));
-                doc.setMargins(HEADER_H + 12, 42, FOOTER_H + 12, 42);
+                doc.setMargins(MARGIN_TOP, MARGIN_SIDE, MARGIN_BOTTOM, MARGIN_SIDE);
 
                 // Solid green title banner.
                 com.itextpdf.layout.element.Div banner = new com.itextpdf.layout.element.Div()
@@ -364,8 +369,8 @@ public class SowService {
     private void addPhotoGallery(Document doc, PdfDocument pdf, Map<String, String> f, Map<String, String> ph) {
         float pageW = pdf.getDefaultPageSize().getWidth();
         float pageH = pdf.getDefaultPageSize().getHeight();
-        float usableW = pageW - 42 - 42;
-        float usableH = pageH - (HEADER_H + 12) - (FOOTER_H + 12);
+        float usableW = pageW - MARGIN_SIDE - MARGIN_SIDE;
+        float usableH = pageH - MARGIN_TOP - MARGIN_BOTTOM;
         float used = 52f;   // the title block already added above
 
         // Hero — the Program Letter Photo, wide across the top.
