@@ -296,11 +296,19 @@ public class SowService {
                 doc.setFont(PdfFontFactory.createFont(StandardFonts.TIMES_ROMAN));
                 doc.setMargins(HEADER_H + 12, 42, FOOTER_H + 12, 42);
 
-                doc.add(new Paragraph("KP-MSYEP — Statement of Work")
-                        .setBold().setFontSize(15).setTextAlignment(TextAlignment.CENTER).setMarginBottom(2));
-                doc.add(new Paragraph("Program " + s.getProgramIndex()
-                        + (center != null ? "  ·  " + nz(center.getName()) : ""))
-                        .setFontSize(11).setTextAlignment(TextAlignment.CENTER).setMarginBottom(10));
+                // Solid green title banner.
+                com.itextpdf.layout.element.Div banner = new com.itextpdf.layout.element.Div()
+                        .setBackgroundColor(GREEN)
+                        .setBorderRadius(new com.itextpdf.layout.properties.BorderRadius(UnitValue.createPointValue(6)))
+                        .setPaddingTop(7).setPaddingBottom(7).setMarginBottom(9);
+                banner.add(new Paragraph("KP-MSYEP  ·  Statement of Work")
+                        .setBold().setFontSize(15).setFontColor(WHITE)
+                        .setTextAlignment(TextAlignment.CENTER).setMargin(0).setMultipliedLeading(1f));
+                banner.add(new Paragraph("Program " + s.getProgramIndex()
+                        + (center != null ? "   ·   " + nz(center.getName()) : ""))
+                        .setFontSize(10.5f).setFontColor(new com.itextpdf.kernel.colors.DeviceRgb(224, 240, 230))
+                        .setTextAlignment(TextAlignment.CENTER).setMargin(0).setMarginTop(2).setMultipliedLeading(1f));
+                doc.add(banner);
 
                 // ---- One-page photo gallery: every uploaded photo as a captioned card ----
                 Map<String, String> f = s.getFields() == null ? Map.of() : s.getFields();
@@ -334,7 +342,19 @@ public class SowService {
 
     private static final com.itextpdf.kernel.colors.DeviceRgb GREEN = new com.itextpdf.kernel.colors.DeviceRgb(31, 122, 74);
     private static final com.itextpdf.kernel.colors.DeviceRgb GREY = new com.itextpdf.kernel.colors.DeviceRgb(95, 95, 95);
-    private static final com.itextpdf.kernel.colors.DeviceRgb CARD_BORDER = new com.itextpdf.kernel.colors.DeviceRgb(210, 220, 214);
+    private static final com.itextpdf.kernel.colors.DeviceRgb DARK = new com.itextpdf.kernel.colors.DeviceRgb(55, 60, 58);
+    private static final com.itextpdf.kernel.colors.DeviceRgb WHITE = new com.itextpdf.kernel.colors.DeviceRgb(255, 255, 255);
+    /** Vibrant but tasteful accents cycled across the photo cards for a colourful, magazine look. */
+    private static final com.itextpdf.kernel.colors.DeviceRgb[] PALETTE = {
+            new com.itextpdf.kernel.colors.DeviceRgb(14, 124, 123),   // teal
+            new com.itextpdf.kernel.colors.DeviceRgb(63, 81, 181),    // indigo
+            new com.itextpdf.kernel.colors.DeviceRgb(231, 111, 81),   // coral
+            new com.itextpdf.kernel.colors.DeviceRgb(46, 125, 79),    // green
+            new com.itextpdf.kernel.colors.DeviceRgb(217, 154, 51),   // amber
+            new com.itextpdf.kernel.colors.DeviceRgb(123, 76, 160),   // purple
+            new com.itextpdf.kernel.colors.DeviceRgb(194, 69, 110),   // rose
+            new com.itextpdf.kernel.colors.DeviceRgb(38, 132, 176),   // blue
+    };
 
     /**
      * Lay out all of a program's photos on a single page: the Program Letter Photo as a wide hero, then
@@ -357,9 +377,9 @@ public class SowService {
             String sub = "";
             if (StringUtils.hasText(guest)) sub += "Chief Guest: " + guest;
             if (StringUtils.hasText(date)) sub += (sub.isEmpty() ? "" : "   ·   ") + date;
-            heroH = 148;
-            Table heroT = new Table(1).useAllAvailableWidth().setMarginBottom(6);
-            heroT.addCell(photoCard(hero, PHOTO_LABELS.get("programLetterPhoto"), sub, usableW - 18, 110, heroH - 8));
+            heroH = 150;
+            Table heroT = new Table(1).useAllAvailableWidth().setMarginBottom(8);
+            heroT.addCell(photoCard(hero, PHOTO_LABELS.get("programLetterPhoto"), sub, usableW - 24, 108, heroH - 8, GREEN));
             doc.add(heroT);
         }
 
@@ -384,12 +404,16 @@ public class SowService {
         float gridH = (usableH - used - heroH) * 0.82f;
         float rowH = Math.min(gridH / rows, 190f);
         float colW = usableW / cols;
-        float photoBoxW = colW - 16;
-        float photoBoxH = rowH - 30;   // leave room for the caption line(s)
+        float photoBoxW = colW - 20;
+        float photoBoxH = rowH - 36;   // room for the coloured header bar + performer line
 
         Table grid = new Table(cols).useAllAvailableWidth();
+        grid.setBorderCollapse(com.itextpdf.layout.properties.BorderCollapsePropertyValue.SEPARATE);
+        grid.setHorizontalBorderSpacing(6).setVerticalBorderSpacing(6);
+        int idx = 0;
         for (String[] c : cards) {
-            grid.addCell(photoCard(decode(ph.get(c[0])), c[1], c[2], photoBoxW, photoBoxH, rowH));
+            com.itextpdf.kernel.colors.DeviceRgb accent = PALETTE[idx++ % PALETTE.length];
+            grid.addCell(photoCard(decode(ph.get(c[0])), c[1], c[2], photoBoxW, photoBoxH, rowH, accent));
         }
         for (int i = count; i < rows * cols; i++) grid.addCell(new Cell().setBorder(Border.NO_BORDER));
         doc.add(grid);
@@ -406,23 +430,34 @@ public class SowService {
         return s.length() > max ? s.substring(0, max - 1).trim() + "…" : s;
     }
 
-    /** One photo card: the whole photo fitted inside a fixed box, with an activity + performer caption. */
-    private Cell photoCard(byte[] img, String title, String subtitle, float boxW, float boxH, float cellH) {
-        Cell c = new Cell().setPadding(5).setHeight(cellH)
-                .setBorder(new SolidBorder(CARD_BORDER, 0.75f))
-                .setBackgroundColor(new com.itextpdf.kernel.colors.DeviceRgb(252, 253, 252))
+    /**
+     * One photo card: a solid coloured header bar with the activity name (white), the whole photo fitted
+     * below it, and the performer underneath — framed by a matching coloured border with rounded corners.
+     */
+    private Cell photoCard(byte[] img, String title, String subtitle, float boxW, float boxH, float cellH,
+                           com.itextpdf.kernel.colors.DeviceRgb accent) {
+        Cell c = new Cell().setPadding(0).setHeight(cellH)
+                .setBorder(new SolidBorder(accent, 1.3f))
+                .setBorderRadius(new com.itextpdf.layout.properties.BorderRadius(UnitValue.createPointValue(5)))
+                .setBackgroundColor(WHITE)
                 .setTextAlignment(TextAlignment.CENTER)
                 .setVerticalAlignment(com.itextpdf.layout.properties.VerticalAlignment.TOP);
+        // Solid coloured header bar.
+        c.add(new Paragraph(nz(title)).setBold().setFontSize(8f).setFontColor(WHITE).setBackgroundColor(accent)
+                .setTextAlignment(TextAlignment.CENTER).setPaddingTop(2.5f).setPaddingBottom(2.5f)
+                .setMargin(0).setMultipliedLeading(1f));
+        // Photo, inset and centred.
         try {
             Image im = new Image(ImageDataFactory.create(img));
             im.scaleToFit(boxW, boxH);
             im.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
-            c.add(im);
+            c.add(new com.itextpdf.layout.element.Div().setMarginTop(4).setMarginBottom(2)
+                    .setTextAlignment(TextAlignment.CENTER).add(im));
         } catch (Exception ignore) { /* skip an unreadable image */ }
-        c.add(new Paragraph(nz(title)).setBold().setFontSize(8.5f).setFontColor(GREEN)
-                .setMarginTop(3).setMarginBottom(0).setMultipliedLeading(1f));
+        // Performer / caption.
         if (StringUtils.hasText(subtitle))
-            c.add(new Paragraph(subtitle).setFontSize(7.5f).setFontColor(GREY).setMargin(0).setMultipliedLeading(1f));
+            c.add(new Paragraph(subtitle).setBold().setFontSize(7.5f).setFontColor(DARK)
+                    .setMargin(0).setMarginBottom(4).setMultipliedLeading(1f));
         return c;
     }
 
