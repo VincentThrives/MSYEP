@@ -42,3 +42,33 @@
     .center-pick { display: flex; gap: 12px; flex-wrap: wrap; margin: 4px 0 14px; }
     .center-pick app-search-select { display: block; flex: 1 1 240px; min-width: 200px; max-width: 340px; }
     .hint.pad { padding: 8px 0; }
+
+/* Click a photo thumbnail to open it full-size in a lightbox. */
+.photo img.clickable { cursor: zoom-in; }
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+
+  img {
+    max-width: 96vw;
+    max-height: 92vh;
+    object-fit: contain;
+    border-radius: 6px;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+    cursor: default;
+  }
+
+  .lb-close {
+    position: fixed;
+    top: 12px;
+    right: 16px;
+    color: #fff;
+  }
+}

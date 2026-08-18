@@ -173,6 +173,15 @@ export class SowComponent {
     delete this.photos[key];
   }
 
+  /** Full-screen preview of a photo (click a thumbnail to open, click/Esc to close). */
+  lightboxSrc: string | null = null;
+  openLightbox(src: string | undefined): void {
+    if (src) this.lightboxSrc = src;
+  }
+  closeLightbox(): void {
+    this.lightboxSrc = null;
+  }
+
   private payload() {
     return { fields: this.fields, photos: this.photos };
   }

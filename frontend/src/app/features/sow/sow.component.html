@@ -108,7 +108,8 @@
     <!-- Reusable photo capture (opens camera on mobile; keeps the whole image, no cropping) -->
     <ng-template #photo let-key="key">
       <div class="photo">
-        <img *ngIf="photos[key]" [src]="photos[key]" alt="photo" />
+        <img *ngIf="photos[key]" [src]="photos[key]" alt="photo" class="clickable"
+          title="Click to view full photo" (click)="openLightbox(photos[key])" />
         <div class="ph-actions">
           <button mat-stroked-button type="button" (click)="picker.click()">
             <mat-icon>photo_camera</mat-icon> {{ photos[key] ? 'Retake' : 'Photo' }}
@@ -119,3 +120,11 @@
         </div>
       </div>
     </ng-template>
+
+<!-- Full-photo lightbox: click any photo thumbnail to see the complete image. -->
+<div class="lightbox" *ngIf="lightboxSrc" (click)="closeLightbox()">
+  <button mat-icon-button class="lb-close" type="button" (click)="closeLightbox()">
+    <mat-icon>close</mat-icon>
+  </button>
+  <img [src]="lightboxSrc" alt="Full photo" (click)="$event.stopPropagation()" />
+</div>
