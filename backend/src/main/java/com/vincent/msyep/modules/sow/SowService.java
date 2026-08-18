@@ -402,7 +402,9 @@ public class SowService {
         float photoBoxW = colW - 20;
         float photoBoxH = rowH - 36;   // room for the coloured header bar + performer line
 
-        Table grid = new Table(cols).useAllAvailableWidth();
+        // Explicit equal columns — otherwise the table auto-sizes columns from the photos' huge intrinsic
+        // widths and the cells (and scaleToFit boxes) come out wrong, clipping wide photos.
+        Table grid = new Table(UnitValue.createPercentArray(new float[]{1, 1, 1})).useAllAvailableWidth();
         grid.setBorderCollapse(com.itextpdf.layout.properties.BorderCollapsePropertyValue.SEPARATE);
         grid.setHorizontalBorderSpacing(6).setVerticalBorderSpacing(6);
 
@@ -441,7 +443,7 @@ public class SowService {
      */
     private Cell photoCard(byte[] img, String title, String subtitle, float boxW, float boxH, float cellH,
                            com.itextpdf.kernel.colors.DeviceRgb accent, int colspan) {
-        Cell c = new Cell(1, colspan).setPadding(0).setHeight(cellH)
+        Cell c = new Cell(1, colspan).setPadding(0).setMinHeight(cellH)
                 .setBorder(new SolidBorder(accent, 1.3f))
                 .setBorderRadius(new com.itextpdf.layout.properties.BorderRadius(UnitValue.createPointValue(5)))
                 .setBackgroundColor(WHITE)
@@ -451,13 +453,14 @@ public class SowService {
         c.add(new Paragraph(nz(title)).setBold().setFontSize(8f).setFontColor(WHITE).setBackgroundColor(accent)
                 .setTextAlignment(TextAlignment.CENTER).setPaddingTop(2.5f).setPaddingBottom(2.5f)
                 .setMargin(0).setMultipliedLeading(1f));
-        // Photo, inset and centred.
+        // Photo — the WHOLE photo, contained in the box. Placed inline inside a centred paragraph, which
+        // honours scaleToFit (an image added directly to a fixed-size cell gets stretched to the cell and
+        // wide photos were clipped).
         try {
             Image im = new Image(ImageDataFactory.create(img));
             im.scaleToFit(boxW, boxH);
-            im.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
-            c.add(new com.itextpdf.layout.element.Div().setMarginTop(4).setMarginBottom(2)
-                    .setTextAlignment(TextAlignment.CENTER).add(im));
+            c.add(new Paragraph().add(im).setTextAlignment(TextAlignment.CENTER)
+                    .setMargin(0).setMarginTop(4).setMarginBottom(2));
         } catch (Exception ignore) { /* skip an unreadable image */ }
         // Performer / caption.
         if (StringUtils.hasText(subtitle))
