@@ -51,7 +51,11 @@
                 <input matInput [(ngModel)]="form.userId" autocomplete="off" [disabled]="!!form.id" /></mat-form-field>
               <mat-form-field appearance="outline"><mat-label>Password</mat-label>
                 <mat-icon matPrefix>lock</mat-icon>
-                <input matInput type="password" [(ngModel)]="form.password" autocomplete="new-password" [disabled]="!!form.id" /></mat-form-field>
+                <input matInput [type]="hidePassword ? 'password' : 'text'" [(ngModel)]="form.password" autocomplete="new-password" [disabled]="!!form.id" />
+                <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword"
+                  [attr.aria-label]="hidePassword ? 'Show password' : 'Hide password'">
+                  <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+                </button></mat-form-field>
             </div>
             <div class="row">
               <mat-form-field appearance="outline"><mat-label>Organization Name</mat-label>

@@ -65,6 +65,7 @@ export class CenterListComponent {
   saving = signal(false);
   result = signal<CenterRegistrationResult | null>(null);
   form: Center = this.blank();
+  hidePassword = true;   // password show/hide (eye) toggle
   private files: Record<string, File> = {};
 
   // ---- Wizard ----

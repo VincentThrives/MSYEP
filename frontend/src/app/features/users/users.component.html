@@ -12,7 +12,11 @@
         <mat-form-field appearance="outline"><mat-label>Email</mat-label>
           <input matInput [(ngModel)]="form.email" /></mat-form-field>
         <mat-form-field appearance="outline"><mat-label>Password</mat-label>
-          <input matInput [(ngModel)]="form.password" /></mat-form-field>
+          <input matInput [type]="hidePassword ? 'password' : 'text'" [(ngModel)]="form.password" />
+          <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword"
+            [attr.aria-label]="hidePassword ? 'Show password' : 'Hide password'">
+            <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button></mat-form-field>
         <app-search-select label="Role" [options]="roles"
           [(value)]="form.role"></app-search-select>
       </div>

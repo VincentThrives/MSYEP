@@ -24,7 +24,11 @@
           <mat-form-field appearance="outline" class="full">
             <mat-label>Password</mat-label>
             <mat-icon matPrefix>lock</mat-icon>
-            <input matInput type="password" name="password" [(ngModel)]="password" required autocomplete="current-password" />
+            <input matInput [type]="hidePassword ? 'password' : 'text'" name="password" [(ngModel)]="password" required autocomplete="current-password" />
+            <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword"
+                    [attr.aria-label]="hidePassword ? 'Show password' : 'Hide password'">
+              <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
           </mat-form-field>
           <p class="error" *ngIf="error()">{{ error() }}</p>
           <button mat-flat-button class="full login-btn" type="submit" [disabled]="loading()">

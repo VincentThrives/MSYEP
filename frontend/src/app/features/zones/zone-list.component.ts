@@ -54,6 +54,7 @@ export class ZoneListComponent {
   showTerms = signal(false);
   result = signal<ZoneRegistrationResult | null>(null);
   form: Zone = this.blank();
+  hidePassword = true;   // password show/hide (eye) toggle
   private files: Record<string, File> = {};
 
   // ---- Wizard ----

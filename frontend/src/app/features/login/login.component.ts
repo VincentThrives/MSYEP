@@ -44,6 +44,7 @@ export class LoginComponent implements OnInit {
   // Staff (password) login
   email = '';
   password = '';
+  hidePassword = true;   // password show/hide (eye) toggle
 
   // Student (OTP) login
   identifier = '';

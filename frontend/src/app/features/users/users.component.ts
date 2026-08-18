@@ -38,6 +38,7 @@ export class UsersComponent {
   centers = signal<Center[]>([]);
   editing = signal(false);
   form: any = this.blank();
+  hidePassword = true;   // password show/hide (eye) toggle
 
   constructor() {
     this.load();
