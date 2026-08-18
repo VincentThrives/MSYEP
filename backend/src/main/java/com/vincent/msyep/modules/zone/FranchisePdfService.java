@@ -148,15 +148,14 @@ public class FranchisePdfService {
             byte[] giverSign = (giver != null) ? giver : readAsset("sign-yktk.png");
             fillSignatureBlock(pdf, 16, zone, zoneSign, giverSign);
 
-            // 5) Signatures — footer of every page: admin/giver bottom-left, zone head bottom-right.
-            stampSignaturesAllPages(pdf, zoneSign, giver);
-
         } catch (Exception e) {
             throw new IllegalStateException("Failed to build MOU: " + e.getMessage(), e);
         }
-        // 6) Strip the template's own MAHACHETHANA seal/watermark, then reframe every page INSIDE the
-        //    YKTK letterhead — so the document sits cleanly on the letter with no clashing old branding.
-        return reframeIntoLetterhead(stripSeals(out.toByteArray()));
+        // 5+6) Strip the template's own MAHACHETHANA seal/watermark, then reframe every page INSIDE the
+        //      YKTK letterhead. The footer signatures (giver bottom-left, zone head bottom-right) are
+        //      stamped inside the reframe at full size — drawn last, so they are neither shrunk by the
+        //      reframe scale nor clipped by the old-page-number erase in that corner.
+        return reframeIntoLetterhead(stripSeals(out.toByteArray()), giver, zoneSign);
     }
 
     // The old MAHACHETHANA SEVA TRUST seal ships in the template as small raster logos: a 117x113
@@ -275,7 +274,7 @@ public class FranchisePdfService {
      * letterhead's peacock header and footer address, so the document sits cleanly inside the letter
      * on every page (never overlapping the header or footer).
      */
-    private byte[] reframeIntoLetterhead(byte[] content) {
+    private byte[] reframeIntoLetterhead(byte[] content, byte[] giver, byte[] zoneHead) {
         ByteArrayOutputStream framed = new ByteArrayOutputStream();
         try (PdfDocument src = new PdfDocument(new PdfReader(new ByteArrayInputStream(content)));
              PdfDocument dst = new PdfDocument(new PdfWriter(framed))) {
@@ -324,6 +323,13 @@ public class FranchisePdfService {
                 float fs = 9f;
                 float lx = (w - pageFont.getWidth(label, fs)) / 2f;   // centred
                 drawBaseline(cv, pageFont, label, lx, LH_FOOTER_H + 8f, fs, w);
+
+                // Footer signatures (drawn last, on top): giver bottom-left, zone head bottom-right.
+                // Sit in the thin band just above the letterhead footer line — bigger and darker than the
+                // old reframe-shrunk stamps so both read clearly, but short enough to clear page content.
+                float sigW = 92f, sigH = 20f, sigY = LH_FOOTER_H + 2f;
+                drawFooterSign(cv, pageFont, giver, new Rectangle(tx + 6, sigY, sigW, sigH), "Giver");
+                drawFooterSign(cv, pageFont, zoneHead, new Rectangle(w - tx - sigW - 6, sigY, sigW, sigH), "Zone Head");
             }
         } catch (Exception e) {
             log.warn("MOU reframe failed: {}", e.getMessage());
@@ -412,12 +418,6 @@ public class FranchisePdfService {
             throw new IllegalStateException("Failed to build certificate: " + e.getMessage(), e);
         }
         return out.toByteArray();
-    }
-
-    private void footerStampSafe(PdfPage page, byte[] img, Rectangle box, String label) {
-        try { footerStamp(page, img, box, label); } catch (Exception e) {
-            log.warn("certificate stamp failed: {}", e.getMessage());
-        }
     }
 
     /**
@@ -673,33 +673,22 @@ public class FranchisePdfService {
         }
     }
 
-    /** Small zone-head + giver signature stamps in the bottom corners of every page. */
-    private void stampSignaturesAllPages(PdfDocument pdf, byte[] zoneHead, byte[] giver) {
-        int n = pdf.getNumberOfPages();
-        for (int i = 1; i <= n; i++) {
-            PdfPage page = pdf.getPage(i);
-            float w = page.getPageSize().getWidth();
-            try {
-                // Bottom corners, small, sitting below the page-number band (~y35) so they don't collide.
-                if (giver != null) footerStamp(page, giver, new Rectangle(34, 12, 66, 18), "Giver");
-                if (zoneHead != null) footerStamp(page, zoneHead, new Rectangle(w - 100, 12, 66, 18), "Zone Head");
-            } catch (Exception e) {
-                log.warn("MOU: footer stamp failed on p{}: {}", i, e.getMessage());
+    /** Draw a full-size footer signature into a box on the final letterhead page, with a small label under it. */
+    private void drawFooterSign(PdfCanvas cv, PdfFont font, byte[] sig, Rectangle box, String label) {
+        if (sig == null) return;
+        try {
+            PdfImageXObject img = new PdfImageXObject(ImageDataFactory.create(sig));
+            Rectangle fit = fitPreservingAspect(img.getWidth(), img.getHeight(), box);
+            cv.saveState().setExtGState(opaqueState());
+            cv.addXObjectFittedIntoRectangle(img, fit);
+            cv.restoreState();
+            if (StringUtils.hasText(label)) {
+                cv.saveState().setExtGState(opaqueState()).setFillColor(new DeviceRgb(110, 110, 110))
+                        .beginText().setFontAndSize(font, 6f)
+                        .moveText(box.getX() + 3, box.getY() - 7).showText(label).endText().restoreState();
             }
-        }
-    }
-
-    private void footerStamp(PdfPage page, byte[] imgBytes, Rectangle box, String label) throws Exception {
-        PdfImageXObject img = new PdfImageXObject(ImageDataFactory.create(imgBytes));
-        PdfCanvas canvas = new PdfCanvas(page);
-        Rectangle fit = fitPreservingAspect(img.getWidth(), img.getHeight(), box);
-        canvas.saveState().setExtGState(opaqueState());
-        canvas.addXObjectFittedIntoRectangle(img, fit);
-        canvas.restoreState();
-        if (StringUtils.hasText(label)) {
-            try (Canvas c = new Canvas(canvas, new Rectangle(box.getX(), box.getY() - 9, box.getWidth() + 40, 9))) {
-                c.add(new Paragraph(label).setFontSize(5).setFontColor(new DeviceRgb(120, 120, 120)).setMargin(0));
-            }
+        } catch (Exception e) {
+            log.warn("MOU: footer sign failed: {}", e.getMessage());
         }
     }
 
