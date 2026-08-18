@@ -41,6 +41,7 @@ export class CenterRegisterComponent {
   loading = signal(false);
   error = signal('');
   done = signal<{ loginId?: string; emailNote?: string } | null>(null);
+  hidePassword = true;   // password show/hide (eye) toggle
 
   readonly centerTypes = ['ITI', 'Diploma', 'PU College', 'Degree College', 'Engineering College', 'Polytechnic', 'Other'];
   readonly months = [
@@ -61,10 +62,17 @@ export class CenterRegisterComponent {
       this.error.set('Center name is required.');
       return;
     }
-    if (!this.model.userId?.trim() || !this.model.password?.trim()) {
-      this.error.set('Login User ID and Password are required.');
+    const email = (this.model.email || '').trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      this.error.set('A valid Center Mail ID is required — it is your login User ID.');
       return;
     }
+    if (!this.model.password?.trim()) {
+      this.error.set('Password is required.');
+      return;
+    }
+    this.model.email = email;
+    this.model.userId = email;   // the Center Mail ID IS the login User ID
     this.loading.set(true);
     this.error.set('');
     const courses = this.coursesText.split(',').map((c) => c.trim()).filter(Boolean);

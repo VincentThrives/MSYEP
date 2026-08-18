@@ -63,11 +63,6 @@
               <input matInput name="contactNumber" [(ngModel)]="model.contactNumber" inputmode="numeric" maxlength="10" />
             </mat-form-field>
             <mat-form-field appearance="outline">
-              <mat-label>Center Email</mat-label>
-              <mat-icon matPrefix>mail</mat-icon>
-              <input matInput type="email" name="email" [(ngModel)]="model.email" />
-            </mat-form-field>
-            <mat-form-field appearance="outline">
               <mat-label>Principal Name</mat-label>
               <input matInput name="principalName" [(ngModel)]="model.principalName" />
             </mat-form-field>
@@ -106,16 +101,23 @@
           </mat-form-field>
 
           <h3 class="sec">Login</h3>
+          <p class="mode-hint">Your Center Mail ID is your login User ID. The password can be anything you choose.</p>
           <div class="grid2">
             <mat-form-field appearance="outline">
-              <mat-label>Login User ID</mat-label>
-              <mat-icon matPrefix>badge</mat-icon>
-              <input matInput name="userId" [(ngModel)]="model.userId" required autocomplete="username" />
+              <mat-label>Center Mail ID (User ID)</mat-label>
+              <mat-icon matPrefix>mail</mat-icon>
+              <input matInput type="email" name="email" [(ngModel)]="model.email" required
+                     autocomplete="username" placeholder="name@college.edu" />
             </mat-form-field>
             <mat-form-field appearance="outline">
               <mat-label>Password</mat-label>
               <mat-icon matPrefix>lock</mat-icon>
-              <input matInput type="password" name="password" [(ngModel)]="model.password" required autocomplete="new-password" />
+              <input matInput [type]="hidePassword ? 'password' : 'text'" name="password"
+                     [(ngModel)]="model.password" required autocomplete="new-password" />
+              <button mat-icon-button matSuffix type="button" (click)="hidePassword = !hidePassword"
+                      [attr.aria-label]="hidePassword ? 'Show password' : 'Hide password'">
+                <mat-icon>{{ hidePassword ? 'visibility_off' : 'visibility' }}</mat-icon>
+              </button>
             </mat-form-field>
           </div>
 
