@@ -96,7 +96,7 @@ const CENTER_NAV: NavItem[] = [
   { label: 'Dashboard', path: '/app/dashboard', icon: 'dashboard' },
   {
     label: 'My Center', icon: 'school', children: [
-      { label: 'Create Center', path: '/app/centers', icon: 'add_home_work', queryParams: { new: 1 } },
+      // A center cannot create another center — it only views/edits its own profile.
       { label: 'View Center', path: '/app/centers', icon: 'list_alt' },
       { label: 'Center Map', path: '/app/center-map', icon: 'map' },
     ],

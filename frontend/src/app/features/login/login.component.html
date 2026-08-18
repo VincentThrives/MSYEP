@@ -30,6 +30,10 @@
           <button mat-flat-button class="full login-btn" type="submit" [disabled]="loading()">
             <mat-icon>login</mat-icon> Sign in
           </button>
+          <!-- Centers can also self-register from here -->
+          <div class="reg-cta" *ngIf="mode() === 'center'">
+            New center? <a routerLink="/register-center"><mat-icon>add_home_work</mat-icon> Register as a Center</a>
+          </div>
         </form>
 
         <!-- Student: OTP only, no password -->

@@ -45,3 +45,21 @@
     .error { color: #d32f2f; font-size: 13px; margin: 0 0 8px; }
     .hint { margin-top: 16px; font-size: 11px; color: #9aa79f; letter-spacing: .3px; }
   
+
+/* Center self-registration: wider card + two-column field grid + section headers. */
+.card.wide { max-width: 660px; }
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+}
+@media (max-width: 600px) {
+  .grid2 { grid-template-columns: 1fr; }
+}
+.sec {
+  margin: 16px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2e7d4f;
+  text-align: left;
+}

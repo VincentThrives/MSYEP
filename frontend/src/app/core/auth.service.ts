@@ -2,7 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { ApiService } from './api.service';
 import {
-  AuthResponse, IdName, OtpRequestResult, Role,
+  AuthResponse, Center, IdName, OtpRequestResult, Role,
   StudentSelfRegisterRequest, StudentSelfRegisterResult,
 } from './models';
 
@@ -29,6 +29,11 @@ export class AuthService {
   /** Public student self-registration → creates an OTP-only account. */
   registerStudent(payload: StudentSelfRegisterRequest): Observable<StudentSelfRegisterResult> {
     return this.api.post<StudentSelfRegisterResult>('/auth/register', payload);
+  }
+
+  /** Public center self-registration → creates the center + its CENTER login (active immediately). */
+  registerCenter(payload: Partial<Center>): Observable<{ loginId?: string; emailNote?: string }> {
+    return this.api.post<{ loginId?: string; emailNote?: string }>('/public/register-center', payload);
   }
 
   /** Public zone list (id + name) for the registration form. */

@@ -44,7 +44,7 @@ public class ZoneController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','ZONE')")
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")   // only admins create zones — a zone can never create another zone
     public ApiResponse<ZoneRegistrationResult> create(@RequestBody Zone zone) {
         ZoneRegistrationResult result = registration.register(zone);
         return ApiResponse.ok(result.note(), result);

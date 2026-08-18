@@ -13,6 +13,11 @@ export const routes: Routes = [
       import('./features/login/student-register.component').then((m) => m.StudentRegisterComponent),
   },
   {
+    path: 'register-center',
+    loadComponent: () =>
+      import('./features/login/center-register.component').then((m) => m.CenterRegisterComponent),
+  },
+  {
     path: 'app',
     canActivate: [authGuard],
     loadComponent: () => import('./layout/shell.component').then((m) => m.ShellComponent),
