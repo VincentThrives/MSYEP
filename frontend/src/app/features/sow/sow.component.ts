@@ -142,7 +142,8 @@ export class SowComponent {
     this.loadStatuses();
   }
 
-  /** Read a captured/selected image, centre-crop to a square and downscale. */
+  /** Read a captured/selected image and downscale it, keeping the WHOLE image (no cropping) so wide
+   *  slides/photos are stored complete and show fully in the SOW PDF. */
   onPhoto(key: string, ev: Event): void {
     const input = ev.target as HTMLInputElement;
     const file = input.files?.[0];
@@ -151,15 +152,16 @@ export class SowComponent {
     reader.onload = () => {
       const img = new Image();
       img.onload = () => {
-        const side = Math.min(img.width, img.height);
-        const sx = (img.width - side) / 2;
-        const sy = (img.height - side) / 2;
-        const out = 640;
+        // Fit within a max dimension, preserving aspect ratio — the entire image is kept.
+        const max = 1280;
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.max(1, Math.round(img.width * scale));
+        const h = Math.max(1, Math.round(img.height * scale));
         const canvas = document.createElement('canvas');
-        canvas.width = out;
-        canvas.height = out;
-        canvas.getContext('2d')!.drawImage(img, sx, sy, side, side, 0, 0, out, out);
-        this.photos[key] = canvas.toDataURL('image/jpeg', 0.7);
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        this.photos[key] = canvas.toDataURL('image/jpeg', 0.8);
       };
       img.src = reader.result as string;
     };

@@ -105,7 +105,7 @@
       </div>
     </div>
 
-    <!-- Reusable photo capture (opens camera on mobile, auto centre-crops to square) -->
+    <!-- Reusable photo capture (opens camera on mobile; keeps the whole image, no cropping) -->
     <ng-template #photo let-key="key">
       <div class="photo">
         <img *ngIf="photos[key]" [src]="photos[key]" alt="photo" />
