@@ -302,39 +302,10 @@ public class SowService {
                         + (center != null ? "  ·  " + nz(center.getName()) : ""))
                         .setFontSize(11).setTextAlignment(TextAlignment.CENTER).setMarginBottom(10));
 
-                // Filled fields as a clean two-column table.
+                // ---- One-page photo gallery: every uploaded photo as a captioned card ----
                 Map<String, String> f = s.getFields() == null ? Map.of() : s.getFields();
-                Table t = new Table(UnitValue.createPercentArray(new float[]{40, 60})).useAllAvailableWidth();
-                int rows = 0;
-                for (Map.Entry<String, String> e : TEXT_LABELS.entrySet()) {
-                    String v = f.get(e.getKey());
-                    if (StringUtils.hasText(v)) {
-                        t.addCell(sowCell(e.getValue(), true));
-                        t.addCell(sowCell(v, false));
-                        rows++;
-                    }
-                }
-                if (rows > 0) doc.add(t);
-
-                // Uploaded program photos, each labelled, two per row.
                 Map<String, String> ph = s.getPhotos() == null ? Map.of() : s.getPhotos();
-                int shown = 0;
-                Table grid = new Table(2).useAllAvailableWidth().setMarginTop(12);
-                for (Map.Entry<String, String> e : PHOTO_LABELS.entrySet()) {
-                    byte[] img = decode(ph.get(e.getKey()));
-                    if (img == null) continue;
-                    Cell c = new Cell().setBorder(new SolidBorder(0.5f)).setPadding(4);
-                    c.add(new Paragraph(e.getValue()).setBold().setFontSize(9).setMarginBottom(3));
-                    try { c.add(new Image(ImageDataFactory.create(img)).setAutoScale(true)); }
-                    catch (Exception ex) { continue; }
-                    grid.addCell(c);
-                    shown++;
-                }
-                if (shown > 0) {
-                    doc.add(new Paragraph("Program Photos").setBold().setFontSize(12).setMarginTop(12));
-                    if (shown % 2 == 1) grid.addCell(new Cell().setBorder(Border.NO_BORDER));
-                    doc.add(grid);
-                }
+                addPhotoGallery(doc, pdf, f, ph);
             }
         } catch (Exception e) {
             throw new IllegalStateException("Failed to build SOW PDF: " + e.getMessage());
@@ -361,11 +332,97 @@ public class SowService {
         }
     }
 
-    private Cell sowCell(String text, boolean label) {
-        Cell c = new Cell().add(new Paragraph(nz(text)).setFontSize(9).setMargin(0))
-                .setBorder(new SolidBorder(new com.itextpdf.kernel.colors.DeviceRgb(200, 210, 205), 0.5f))
-                .setPadding(3);
-        if (label) c.setBold();
+    private static final com.itextpdf.kernel.colors.DeviceRgb GREEN = new com.itextpdf.kernel.colors.DeviceRgb(31, 122, 74);
+    private static final com.itextpdf.kernel.colors.DeviceRgb GREY = new com.itextpdf.kernel.colors.DeviceRgb(95, 95, 95);
+    private static final com.itextpdf.kernel.colors.DeviceRgb CARD_BORDER = new com.itextpdf.kernel.colors.DeviceRgb(210, 220, 214);
+
+    /**
+     * Lay out all of a program's photos on a single page: the Program Letter Photo as a wide hero, then
+     * every other uploaded photo as a captioned card in an adaptive grid. Each caption shows the activity
+     * name and who performed it. Sizes are computed from the photo count so everything fits one page.
+     */
+    private void addPhotoGallery(Document doc, PdfDocument pdf, Map<String, String> f, Map<String, String> ph) {
+        float pageW = pdf.getDefaultPageSize().getWidth();
+        float pageH = pdf.getDefaultPageSize().getHeight();
+        float usableW = pageW - 42 - 42;
+        float usableH = pageH - (HEADER_H + 12) - (FOOTER_H + 12);
+        float used = 52f;   // the title block already added above
+
+        // Hero — the Program Letter Photo, wide across the top.
+        byte[] hero = decode(ph.get("programLetterPhoto"));
+        float heroH = 0;
+        if (hero != null) {
+            String guest = firstNonBlank(f.get("guestName"), f.get("letterGuestName"), f.get("guestDesignation"));
+            String date = firstNonBlank(f.get("inaugurationDate"), f.get("groupsDate"));
+            String sub = "";
+            if (StringUtils.hasText(guest)) sub += "Chief Guest: " + guest;
+            if (StringUtils.hasText(date)) sub += (sub.isEmpty() ? "" : "   ·   ") + date;
+            heroH = 148;
+            Table heroT = new Table(1).useAllAvailableWidth().setMarginBottom(6);
+            heroT.addCell(photoCard(hero, PHOTO_LABELS.get("programLetterPhoto"), sub, usableW - 18, 110, heroH - 8));
+            doc.add(heroT);
+        }
+
+        // Every other uploaded photo, in the defined order, with its caption.
+        List<String[]> cards = new java.util.ArrayList<>();   // {key, title, subtitle}
+        for (Map.Entry<String, String> e : PHOTO_LABELS.entrySet()) {
+            String key = e.getKey();
+            if (key.equals("programLetterPhoto")) continue;
+            if (decode(ph.get(key)) == null) continue;
+            cards.add(new String[]{key, e.getValue(), performedBy(key, f)});
+        }
+        int count = cards.size();
+        if (count == 0) {
+            if (hero == null) doc.add(new Paragraph("No photos uploaded for this program yet.")
+                    .setFontSize(11).setFontColor(GREY).setTextAlignment(TextAlignment.CENTER).setMarginTop(20));
+            return;
+        }
+
+        int cols = count <= 4 ? 2 : 3;
+        int rows = (int) Math.ceil(count / (double) cols);
+        // Fit the grid into the remaining band with a firm safety factor so it never spills to a 2nd page.
+        float gridH = (usableH - used - heroH) * 0.82f;
+        float rowH = Math.min(gridH / rows, 190f);
+        float colW = usableW / cols;
+        float photoBoxW = colW - 16;
+        float photoBoxH = rowH - 30;   // leave room for the caption line(s)
+
+        Table grid = new Table(cols).useAllAvailableWidth();
+        for (String[] c : cards) {
+            grid.addCell(photoCard(decode(ph.get(c[0])), c[1], c[2], photoBoxW, photoBoxH, rowH));
+        }
+        for (int i = count; i < rows * cols; i++) grid.addCell(new Cell().setBorder(Border.NO_BORDER));
+        doc.add(grid);
+    }
+
+    /** Short "by <person>" (or a trimmed opinion) for a photo caption — kept to one line for the grid. */
+    private String performedBy(String key, Map<String, String> f) {
+        if (key.equals("guestOpinion")) return ellipsis(nz(f.get("guestOpinion")), 42);
+        String person = f.get(key);
+        return StringUtils.hasText(person) ? ellipsis("by " + person, 34) : "";
+    }
+
+    private static String ellipsis(String s, int max) {
+        return s.length() > max ? s.substring(0, max - 1).trim() + "…" : s;
+    }
+
+    /** One photo card: the whole photo fitted inside a fixed box, with an activity + performer caption. */
+    private Cell photoCard(byte[] img, String title, String subtitle, float boxW, float boxH, float cellH) {
+        Cell c = new Cell().setPadding(5).setHeight(cellH)
+                .setBorder(new SolidBorder(CARD_BORDER, 0.75f))
+                .setBackgroundColor(new com.itextpdf.kernel.colors.DeviceRgb(252, 253, 252))
+                .setTextAlignment(TextAlignment.CENTER)
+                .setVerticalAlignment(com.itextpdf.layout.properties.VerticalAlignment.TOP);
+        try {
+            Image im = new Image(ImageDataFactory.create(img));
+            im.scaleToFit(boxW, boxH);
+            im.setHorizontalAlignment(com.itextpdf.layout.properties.HorizontalAlignment.CENTER);
+            c.add(im);
+        } catch (Exception ignore) { /* skip an unreadable image */ }
+        c.add(new Paragraph(nz(title)).setBold().setFontSize(8.5f).setFontColor(GREEN)
+                .setMarginTop(3).setMarginBottom(0).setMultipliedLeading(1f));
+        if (StringUtils.hasText(subtitle))
+            c.add(new Paragraph(subtitle).setFontSize(7.5f).setFontColor(GREY).setMargin(0).setMultipliedLeading(1f));
         return c;
     }
 
