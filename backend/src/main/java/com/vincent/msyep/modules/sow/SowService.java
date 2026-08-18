@@ -373,20 +373,9 @@ public class SowService {
         float usableH = pageH - MARGIN_TOP - MARGIN_BOTTOM;
         float used = 52f;   // the title block already added above
 
-        // Hero — the Program Letter Photo, wide across the top.
+        // The Program Letter Photo goes into the SAME 3-column grid, spanning 2 columns of the top row,
+        // so the top-right cell holds the first activity photo and nothing is ever left alone in a row.
         byte[] hero = decode(ph.get("programLetterPhoto"));
-        float heroH = 0;
-        if (hero != null) {
-            String guest = firstNonBlank(f.get("guestName"), f.get("letterGuestName"), f.get("guestDesignation"));
-            String date = firstNonBlank(f.get("inaugurationDate"), f.get("groupsDate"));
-            String sub = "";
-            if (StringUtils.hasText(guest)) sub += "Chief Guest: " + guest;
-            if (StringUtils.hasText(date)) sub += (sub.isEmpty() ? "" : "   ·   ") + date;
-            heroH = 150;
-            Table heroT = new Table(1).useAllAvailableWidth().setMarginBottom(8);
-            heroT.addCell(photoCard(hero, PHOTO_LABELS.get("programLetterPhoto"), sub, usableW - 24, 108, heroH - 8, GREEN));
-            doc.add(heroT);
-        }
 
         // Every other uploaded photo, in the defined order, with its caption.
         List<String[]> cards = new java.util.ArrayList<>();   // {key, title, subtitle}
@@ -397,17 +386,18 @@ public class SowService {
             cards.add(new String[]{key, e.getValue(), performedBy(key, f)});
         }
         int count = cards.size();
-        if (count == 0) {
-            if (hero == null) doc.add(new Paragraph("No photos uploaded for this program yet.")
+        if (count == 0 && hero == null) {
+            doc.add(new Paragraph("No photos uploaded for this program yet.")
                     .setFontSize(11).setFontColor(GREY).setTextAlignment(TextAlignment.CENTER).setMarginTop(20));
             return;
         }
 
-        int cols = count <= 4 ? 2 : 3;
-        int rows = (int) Math.ceil(count / (double) cols);
-        // Fit the grid into the remaining band with a firm safety factor so it never spills to a 2nd page.
-        float gridH = (usableH - used - heroH) * 0.82f;
-        float rowH = Math.min(gridH / rows, 190f);
+        int cols = 3;
+        int slots = (hero != null ? 2 : 0) + count;   // the hero occupies two column-slots
+        int rows = Math.max(1, (int) Math.ceil(slots / (double) cols));
+        // Fit the grid into the band with a firm safety factor so it never spills to a 2nd page.
+        float gridH = (usableH - used) * 0.90f;
+        float rowH = Math.min(gridH / rows, 200f);
         float colW = usableW / cols;
         float photoBoxW = colW - 20;
         float photoBoxH = rowH - 36;   // room for the coloured header bar + performer line
@@ -415,12 +405,22 @@ public class SowService {
         Table grid = new Table(cols).useAllAvailableWidth();
         grid.setBorderCollapse(com.itextpdf.layout.properties.BorderCollapsePropertyValue.SEPARATE);
         grid.setHorizontalBorderSpacing(6).setVerticalBorderSpacing(6);
+
+        if (hero != null) {
+            String guest = firstNonBlank(f.get("guestName"), f.get("letterGuestName"), f.get("guestDesignation"));
+            String date = firstNonBlank(f.get("inaugurationDate"), f.get("groupsDate"));
+            String sub = "";
+            if (StringUtils.hasText(guest)) sub += "Chief Guest: " + guest;
+            if (StringUtils.hasText(date)) sub += (sub.isEmpty() ? "" : "   ·   ") + date;
+            grid.addCell(photoCard(hero, PHOTO_LABELS.get("programLetterPhoto"), sub,
+                    2 * colW - 24, photoBoxH, rowH, GREEN, 2));   // spans 2 columns
+        }
         int idx = 0;
         for (String[] c : cards) {
             com.itextpdf.kernel.colors.DeviceRgb accent = PALETTE[idx++ % PALETTE.length];
-            grid.addCell(photoCard(decode(ph.get(c[0])), c[1], c[2], photoBoxW, photoBoxH, rowH, accent));
+            grid.addCell(photoCard(decode(ph.get(c[0])), c[1], c[2], photoBoxW, photoBoxH, rowH, accent, 1));
         }
-        for (int i = count; i < rows * cols; i++) grid.addCell(new Cell().setBorder(Border.NO_BORDER));
+        for (int i = slots; i < rows * cols; i++) grid.addCell(new Cell().setBorder(Border.NO_BORDER));
         doc.add(grid);
     }
 
@@ -440,8 +440,8 @@ public class SowService {
      * below it, and the performer underneath — framed by a matching coloured border with rounded corners.
      */
     private Cell photoCard(byte[] img, String title, String subtitle, float boxW, float boxH, float cellH,
-                           com.itextpdf.kernel.colors.DeviceRgb accent) {
-        Cell c = new Cell().setPadding(0).setHeight(cellH)
+                           com.itextpdf.kernel.colors.DeviceRgb accent, int colspan) {
+        Cell c = new Cell(1, colspan).setPadding(0).setHeight(cellH)
                 .setBorder(new SolidBorder(accent, 1.3f))
                 .setBorderRadius(new com.itextpdf.layout.properties.BorderRadius(UnitValue.createPointValue(5)))
                 .setBackgroundColor(WHITE)
