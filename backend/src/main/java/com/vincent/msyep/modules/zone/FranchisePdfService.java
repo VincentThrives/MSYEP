@@ -80,6 +80,11 @@ public class FranchisePdfService {
     private static final int[] LOGO_PAGES = {17, 19, 23, 24, 25};
     /** Template page carrying the Franchisee Certificate (Annexure-10). */
     private static final int CERTIFICATE_PAGE = 27;
+    /**
+     * First final (reframed) page of the annexe block. These pages carry the source document's own small
+     * page number baked in near the footer; we white it out on this page onwards.
+     */
+    private static final int ANNEXE_FIRST_PAGE = 28;
 
     private final String uploadsDir;
     private final com.vincent.msyep.modules.admin.AdminSignatureService adminSignature;
@@ -323,6 +328,15 @@ public class FranchisePdfService {
                 float fs = 9f;
                 float lx = (w - pageFont.getWidth(label, fs)) / 2f;   // centred
                 drawBaseline(cv, pageFont, label, lx, LH_FOOTER_H + 8f, fs, w);
+
+                // The annexe pages (28..last) carry the source document's OWN small page number baked in
+                // (e.g. "16"), in an isolated spot just above the footer signature. Cover only that tiny
+                // spot with white. Restricted to the annexe range so it can never touch real text — on
+                // the earlier signature-block page (p16) the giver "Company Name" line sits near here.
+                if (i >= ANNEXE_FIRST_PAGE) {
+                    cv.saveState().setExtGState(opaqueState()).setFillColor(ColorConstants.WHITE)
+                            .rectangle(458, 103, 34, 16).fill().restoreState();
+                }
 
                 // Footer signatures (drawn last, on top): giver bottom-left, zone head bottom-right.
                 // Sit in the thin band just above the letterhead footer line — bigger and darker than the
