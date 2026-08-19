@@ -214,7 +214,7 @@ export class SowComponent {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `SOW-Program-${this.program()}.pdf`;
+            a.download = `KP-MSYEP-Training-Program-${this.program()}.pdf`;
             a.click();
             URL.revokeObjectURL(url);
             this.snack.open('Downloaded — and emailed to the college mail-id (if configured).', 'OK', { duration: 4000 });
@@ -236,7 +236,7 @@ export class SowComponent {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'KP-MSYEP-SOW-Programs.pdf';
+        a.download = 'KP-MSYEP-Training-Programs.pdf';
         a.click();
         URL.revokeObjectURL(url);
         this.snack.open('Downloaded all saved SOW programs as one PDF.', 'OK', { duration: 3500 });
