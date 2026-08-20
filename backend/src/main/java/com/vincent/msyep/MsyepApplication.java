@@ -7,5 +7,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class MsyepApplication {
     public static void main(String[] args) {
         SpringApplication.run(MsyepApplication.class, args);
+        
     }
 }
