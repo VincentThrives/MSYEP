@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  apiBase: '/api/v1',
+  apiBase: 'https://msyep.onrender.com/api/v1',
 };
