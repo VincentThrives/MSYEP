@@ -30,7 +30,7 @@ app:
     secret: ${JWT_SECRET:change-me-in-prod-this-must-be-at-least-256-bits-long-secret-key-value}
     access-token-ttl-minutes: 120
   cors:
-    allowed-origins: ${CORS_ORIGINS:http://localhost:4200,http://localhost:4205}
+    allowed-origins: ${CORS_ORIGINS:http://localhost:4200,http://localhost:4205,https://msyep.netlify.app}
   uploads-dir: ${UPLOADS_DIR:uploads}
   # Seed a Super Admin on first boot if no users exist.
   seed:
