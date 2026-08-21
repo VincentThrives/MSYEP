@@ -14,18 +14,13 @@
       background: linear-gradient(90deg, #0E5132, #C9A227);
       -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
     .tag { color: #6b7d72; margin-bottom: 20px; font-size: 13px; letter-spacing: .5px; }
-    .modes { width: 100%; margin: 4px 0 14px; border-radius: 12px; overflow: hidden; }
-    .modes .mat-button-toggle { flex: 1; min-width: 0; }
-    /* 4 tabs → shrink the label so they fit one row */
+    /* The card is only ~370px wide, so four role tabs never fit one row without
+       clipping the labels. Lay them out as a 2×2 grid at every width. */
+    .modes { width: 100%; margin: 4px 0 14px; border-radius: 12px; overflow: hidden; flex-wrap: wrap; }
+    .modes .mat-button-toggle { flex: 1 1 40%; min-width: 0; }
     .modes .mat-button-toggle-button { font-size: 12.5px; }
     .modes .mat-button-toggle .mat-icon { font-size: 18px; height: 18px; width: 18px; margin-right: 2px; }
-    .modes .mat-button-toggle-label-content { padding: 0 8px; overflow: hidden; text-overflow: ellipsis; }
-    /* On small phones the four mode toggles wrap into a 2×2 grid instead of overflowing. */
-    @media (max-width: 480px) {
-      .modes { flex-wrap: wrap; }
-      /* basis 40% + shrink so exactly two toggles share each row → a 2×2 grid */
-      .modes .mat-button-toggle { flex: 1 1 40%; min-width: 0; }
-    }
+    .modes .mat-button-toggle-label-content { padding: 0 8px; }
     .modes .mat-button-toggle-checked { background: rgba(30,122,70,.12); }
     .mode-hint { text-align: center; font-size: 12px; color: #6b7d72; margin: 0 0 12px; letter-spacing: .3px; }
     .bar { margin-bottom: 12px; border-radius: 4px; }
