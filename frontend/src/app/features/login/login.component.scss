@@ -2,7 +2,7 @@
       background:
         radial-gradient(900px 500px at 110% -10%, rgba(232,197,71,.55), transparent 60%),
         linear-gradient(135deg, #0E5132 0%, #1E7A46 50%, #C9A227 130%); }
-    .card { width: 370px; max-width: 92vw; padding: 34px 30px 26px; text-align: center;
+    .card { width: 370px; max-width: 92vw; box-sizing: border-box; padding: 34px 30px 26px; text-align: center;
       background: #fff; border-radius: 22px;
       box-shadow: 0 24px 60px rgba(0,0,0,.30); position: relative; }
     .badge { width: 64px; height: 64px; margin: -62px auto 10px; border-radius: 50%;
@@ -15,11 +15,17 @@
       -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
     .tag { color: #6b7d72; margin-bottom: 20px; font-size: 13px; letter-spacing: .5px; }
     .modes { width: 100%; margin: 4px 0 14px; border-radius: 12px; overflow: hidden; }
-    .modes .mat-button-toggle { flex: 1; }
+    .modes .mat-button-toggle { flex: 1; min-width: 0; }
     /* 4 tabs → shrink the label so they fit one row */
     .modes .mat-button-toggle-button { font-size: 12.5px; }
     .modes .mat-button-toggle .mat-icon { font-size: 18px; height: 18px; width: 18px; margin-right: 2px; }
-    .modes .mat-button-toggle-label-content { padding: 0 8px; }
+    .modes .mat-button-toggle-label-content { padding: 0 8px; overflow: hidden; text-overflow: ellipsis; }
+    /* On small phones the four mode toggles wrap into a 2×2 grid instead of overflowing. */
+    @media (max-width: 480px) {
+      .modes { flex-wrap: wrap; }
+      /* basis 40% + shrink so exactly two toggles share each row → a 2×2 grid */
+      .modes .mat-button-toggle { flex: 1 1 40%; min-width: 0; }
+    }
     .modes .mat-button-toggle-checked { background: rgba(30,122,70,.12); }
     .mode-hint { text-align: center; font-size: 12px; color: #6b7d72; margin: 0 0 12px; letter-spacing: .3px; }
     .bar { margin-bottom: 12px; border-radius: 4px; }
@@ -46,8 +52,9 @@
     .hint { margin-top: 16px; font-size: 11px; color: #9aa79f; letter-spacing: .3px; }
   
 
-/* Center self-registration: wider card + two-column field grid + section headers. */
-.card.wide { max-width: 660px; }
+/* Center self-registration: wider card + two-column field grid + section headers.
+   width drives the desktop size; max-width:92vw keeps it inside a phone screen. */
+.card.wide { width: 640px; max-width: 92vw; }
 .grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;

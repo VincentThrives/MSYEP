@@ -3,7 +3,7 @@
     .brand { font-weight: 700; letter-spacing: 1px; }
     .portal-name { opacity: .85; font-size: 14px; margin-left: 8px; }
     .spacer { flex: 1 1 auto; }
-    .user { margin-left: 4px; }
+    .user { margin-left: 4px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .container { flex: 1; }
     .sidenav { width: 250px; border-right: 1px solid #eee; }
     .content { padding: 24px; background: #fafafa; box-sizing: border-box; }
@@ -14,4 +14,17 @@
     .child-link { padding-left: 20px !important; }
     .child-link mat-icon[matListItemIcon] { transform: scale(.85); opacity: .85; }
     .child-hidden { display: none !important; }
-  
+
+    /* ---------- Mobile / tablet-portrait ---------- */
+    @media (max-width: 900px) {
+      .content { padding: 14px; }
+      /* Overlay drawer a bit narrower than the phone so the backdrop stays tappable. */
+      .sidenav { width: 82vw; max-width: 300px; }
+      .portal-name { display: none; }        /* free up the cramped top bar */
+      .user { max-width: 96px; }
+    }
+    @media (max-width: 480px) {
+      .content { padding: 10px; }
+      .brand { font-size: 18px; }
+      .user { max-width: 0; margin: 0; }      /* icon-only account button on small phones */
+    }
