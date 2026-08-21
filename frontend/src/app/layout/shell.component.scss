@@ -1,5 +1,9 @@
     .shell { height: 100vh; display: flex; flex-direction: column; }
     .topbar { color: #fff; gap: 8px; }
+    /* Make the hamburger unmistakably a tappable control that opens the side nav. */
+    .menu-btn { color: #fff; background: rgba(255,255,255,.16); border-radius: 10px; }
+    .menu-btn:hover { background: rgba(255,255,255,.28); }
+    .menu-btn mat-icon { font-size: 26px; width: 26px; height: 26px; }
     .brand { font-weight: 700; letter-spacing: 1px; }
     .portal-name { opacity: .85; font-size: 14px; margin-left: 8px; }
     .spacer { flex: 1 1 auto; }
