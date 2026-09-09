@@ -19,4 +19,5 @@ REM ---- (optional) MongoDB Atlas; leave commented for local MongoDB ----
 REM set "MONGODB_URI=mongodb+srv://USER:PASS@cluster.mongodb.net/msyep"
 
 cd /d "%~dp0"
-call mvnw.cmd -o spring-boot:run
+REM Use the full path — Windows does not resolve commands from the current directory.
+call "%~dp0mvnw.cmd" -o spring-boot:run
