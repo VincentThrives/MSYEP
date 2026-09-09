@@ -131,6 +131,46 @@ h1 { color: var(--green-deep); }
 
 .full-width { width: 100%; }
 
+/* ============================================================
+   Mobile / tablet-portrait responsiveness (global).
+   Applies to every feature unit; per-page tweaks layer on top.
+   ============================================================ */
+@media (max-width: 900px) {
+  /* Page-header rows: title + action stack cleanly and the button goes full-width. */
+  .head { align-items: stretch; }
+  .head > button { width: 100%; }
+
+  /* Data tables scroll horizontally inside their own box instead of blowing out
+     the page width. Native <table mat-table> becomes a scrollable block. */
+  .shell table.mat-mdc-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    border-radius: 12px;
+  }
+
+  /* Forms: fields go full-width and any fixed-width rows wrap. */
+  .shell .mat-mdc-form-field { width: 100%; }
+  .form-row, .filters, .list-filters { flex-wrap: wrap; }
+
+  /* Dialogs must never exceed the viewport. */
+  .mat-mdc-dialog-container .mdc-dialog__surface,
+  .cdk-overlay-pane.mat-mdc-dialog-panel {
+    max-width: 96vw !important;
+  }
+
+  /* Cards span the row on narrow screens. */
+  .shell .mat-mdc-card { width: 100%; box-sizing: border-box; }
+}
+
+@media (max-width: 480px) {
+  /* Tighter type + controls for phones. */
+  h1 { font-size: 1.45rem; }
+  h2 { font-size: 1.2rem; }
+  .shell .mat-mdc-card { border-radius: 12px !important; }
+}
+
 /* SOW full-photo viewer dialog: transparent surface so only the photo shows, with room for the
    close button to sit just outside the image corner. */
 .photo-dialog {
