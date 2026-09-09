@@ -13,6 +13,15 @@
 
         <mat-progress-bar *ngIf="loading()" mode="indeterminate" class="bar"></mat-progress-bar>
 
+        <!-- The hosted backend sleeps when idle; reassure instead of looking frozen. -->
+        <div class="waking" *ngIf="waking()">
+          <mat-icon>hourglass_top</mat-icon>
+          <div>
+            <b>Waking up the server…</b>
+            <span>This happens after a period of inactivity and can take up to a minute. Please wait.</span>
+          </div>
+        </div>
+
         <!-- Staff / Zone / Center: email + password -->
         <form *ngIf="isPasswordMode()" (ngSubmit)="submit()">
           <div class="mode-hint">{{ modeHint() }}</div>

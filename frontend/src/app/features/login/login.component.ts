@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -14,6 +14,13 @@ import { AuthService } from '../../core/auth.service';
 
 type Mode = 'staff' | 'zone' | 'center' | 'student';
 
+/**
+ * The hosted backend sleeps when idle, so the first request after a pause has to
+ * wake it — that can take up to a minute and otherwise just looks like a hang.
+ * If a request is still running after this long, we say so instead.
+ */
+const WAKE_NOTICE_MS = 4000;
+
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -25,10 +32,14 @@ type Mode = 'staff' | 'zone' | 'center' | 'student';
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
-export class LoginComponent implements OnInit {
+export class LoginComponent implements OnInit, OnDestroy {
   private auth = inject(AuthService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+
+  ngOnDestroy(): void {
+    clearTimeout(this.wakeTimer);
+  }
 
   ngOnInit(): void {
     // Prefill from /login?id=... (e.g. straight after self-registration).
@@ -56,6 +67,36 @@ export class LoginComponent implements OnInit {
   loading = signal(false);
   error = signal('');
   info = signal('');
+  /** True once a request has run long enough that the server is probably still waking up. */
+  waking = signal(false);
+  private wakeTimer: ReturnType<typeof setTimeout> | undefined;
+
+  /** Begin a request: clear errors, show the spinner, and arm the "waking up" notice. */
+  private startRequest(): void {
+    this.loading.set(true);
+    this.error.set('');
+    this.waking.set(false);
+    clearTimeout(this.wakeTimer);
+    this.wakeTimer = setTimeout(() => this.waking.set(true), WAKE_NOTICE_MS);
+  }
+
+  /** End a request, whatever the outcome. */
+  private endRequest(): void {
+    this.loading.set(false);
+    this.waking.set(false);
+    clearTimeout(this.wakeTimer);
+  }
+
+  /**
+   * A network-level failure (status 0) or a gateway timeout usually means the sleeping
+   * backend didn't wake in time — say that rather than the misleading "Login failed".
+   */
+  private message(err: any, fallback: string): string {
+    if (err?.status === 0 || err?.status === 502 || err?.status === 503 || err?.status === 504) {
+      return 'Could not reach the server — it may still be starting up. Please try again in a moment.';
+    }
+    return err?.error?.message || fallback;
+  }
 
   /** Staff, Zone and Center all sign in with email + password (the account's role decides the portal). */
   isPasswordMode(): boolean {
@@ -83,16 +124,15 @@ export class LoginComponent implements OnInit {
   // --- Staff password login ---
   submit(): void {
     if (!this.email || !this.password) return;
-    this.loading.set(true);
-    this.error.set('');
+    this.startRequest();
     this.auth.login(this.email.trim(), this.password).subscribe({
       next: () => {
-        this.loading.set(false);
+        this.endRequest();
         this.router.navigateByUrl(this.auth.homeRoute());
       },
       error: (err) => {
-        this.loading.set(false);
-        this.error.set(err?.error?.message || 'Login failed');
+        this.endRequest();
+        this.error.set(this.message(err, 'Login failed'));
       },
     });
   }
@@ -100,37 +140,35 @@ export class LoginComponent implements OnInit {
   // --- Student OTP login ---
   sendOtp(): void {
     if (!this.identifier.trim()) return;
-    this.loading.set(true);
-    this.error.set('');
+    this.startRequest();
     this.info.set('');
     this.devOtp.set('');
     this.auth.requestOtp(this.identifier.trim()).subscribe({
       next: (res) => {
-        this.loading.set(false);
+        this.endRequest();
         this.otpSent.set(true);
         this.otpTarget.set(res.target || '');
         this.info.set(res.message || 'OTP sent.');
         this.devOtp.set(res.devOtp || '');
       },
       error: (err) => {
-        this.loading.set(false);
-        this.error.set(err?.error?.message || 'Could not send OTP');
+        this.endRequest();
+        this.error.set(this.message(err, 'Could not send OTP'));
       },
     });
   }
 
   verifyOtp(): void {
     if (!this.otp.trim()) return;
-    this.loading.set(true);
-    this.error.set('');
+    this.startRequest();
     this.auth.verifyOtp(this.identifier.trim(), this.otp.trim()).subscribe({
       next: () => {
-        this.loading.set(false);
+        this.endRequest();
         this.router.navigateByUrl(this.auth.homeRoute());
       },
       error: (err) => {
-        this.loading.set(false);
-        this.error.set(err?.error?.message || 'Invalid OTP');
+        this.endRequest();
+        this.error.set(this.message(err, 'Invalid OTP'));
       },
     });
   }
