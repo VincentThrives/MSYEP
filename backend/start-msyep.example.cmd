@@ -12,7 +12,7 @@ set "MAIL_HOST=mail.privateemail.com"
 set "MAIL_PORT=587"
 
 REM ---- Your mailbox (also the "from" address) ----
-set "MAIL_USERNAME=no-reply@vincentthrives.com"
+set "MAIL_USERNAME=no-reply@msyep.in"
 set "MAIL_PASSWORD=your-mailbox-password"
 
 REM ---- (optional) MongoDB Atlas; leave commented for local MongoDB ----
