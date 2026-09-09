@@ -24,6 +24,15 @@
     .modes .mat-button-toggle-checked { background: rgba(30,122,70,.12); }
     .mode-hint { text-align: center; font-size: 12px; color: #6b7d72; margin: 0 0 12px; letter-spacing: .3px; }
     .bar { margin-bottom: 12px; border-radius: 4px; }
+    /* "Server is waking up" notice — shown when a request runs unusually long. */
+    .waking { display: flex; align-items: flex-start; gap: 10px; text-align: left;
+      background: #fff7db; border: 1px solid #f0e2a8; border-radius: 10px;
+      padding: 10px 12px; margin: 0 0 12px; }
+    .waking mat-icon { color: #8a6d00; font-size: 20px; height: 20px; width: 20px; flex: 0 0 auto;
+      animation: waking-spin 1.6s linear infinite; }
+    .waking b { display: block; color: #7a5f00; font-size: 13px; }
+    .waking span { display: block; color: #8a7530; font-size: 12px; line-height: 1.35; margin-top: 2px; }
+    @keyframes waking-spin { to { transform: rotate(360deg); } }
     .info { color: #0E5132; font-size: 13px; margin: 0 0 10px; }
     .devotp { color: #8a6d00; font-size: 13px; margin: 0 0 10px;
       background: #fff7db; border: 1px solid #f0e2a8; border-radius: 8px; padding: 6px 10px; }
