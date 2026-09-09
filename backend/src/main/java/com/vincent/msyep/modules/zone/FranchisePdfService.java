@@ -160,7 +160,18 @@ public class FranchisePdfService {
         //      YKTK letterhead. The footer signatures (giver bottom-left, zone head bottom-right) are
         //      stamped inside the reframe at full size — drawn last, so they are neither shrunk by the
         //      reframe scale nor clipped by the old-page-number erase in that corner.
-        return reframeIntoLetterhead(stripSeals(out.toByteArray()), giver, zoneSign);
+        //
+        //      Each stage rewrites the whole document, and iText holds the parsed source AND destination
+        //      in memory while it runs. Nesting the calls kept every intermediate reachable at once and
+        //      exhausted the heap (OutOfMemoryError on this endpoint), so hand each stage its input and
+        //      drop the previous copy first — at most one finished document is retained at a time.
+        byte[] built = out.toByteArray();
+        out.reset();
+        byte[] deSealed = stripSeals(built);
+        built = null;
+        byte[] framed = reframeIntoLetterhead(deSealed, giver, zoneSign);
+        deSealed = null;
+        return framed;
     }
 
     // The old MAHACHETHANA SEVA TRUST seal ships in the template as small raster logos: a 117x113
