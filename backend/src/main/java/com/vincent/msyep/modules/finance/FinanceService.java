@@ -197,6 +197,9 @@ public class FinanceService {
             jakarta.mail.internet.MimeMessage mime = mailSender.get().createMimeMessage();
             org.springframework.mail.javamail.MimeMessageHelper h =
                     new org.springframework.mail.javamail.MimeMessageHelper(mime, blueprint != null, "UTF-8");
+            // The SMTP relay requires the From to be the authenticated mailbox (a fully-qualified
+            // address); without this JavaMail falls back to user@hostname and the server rejects it.
+            h.setFrom(mailUsername);
             h.setTo(to.toArray(new String[0]));
             h.setSubject(subject);
             h.setText(body);

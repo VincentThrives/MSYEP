@@ -44,26 +44,29 @@ try {
   }).then(j));
   console.log('3) Send result:', JSON.stringify(send));
 
-  // 4) Read the MailLog and report
+  // 4) Read the MailLog (NEWEST entry by timestamp — not an old match) and report
   const logs = unwrap(await fetch(`${BASE}/finance/mail-history`, { headers: H }).then(j));
-  const rec = Array.isArray(logs)
-    ? (logs.find(l => (l.recipients || []).includes(TO)) || logs[0])
+  const rec = Array.isArray(logs) && logs.length
+    ? [...logs].sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt))[0]
     : null;
+  const outcome = String(Object.values(send || {})[0] || '');   // "SENT:..." / "FAILED:..." from THIS send
 
   console.log('\n==================== VERDICT ====================');
-  if (!rec) { console.log('No mail-log entry found.'); process.exit(1); }
-  console.log('recipients :', rec.recipients);
-  console.log('status     :', rec.status);
-  console.log('sent/total :', rec.sent + '/' + rec.total);
-  console.log('stub       :', rec.stub);
+  console.log('send outcome :', outcome);
+  if (rec) {
+    console.log('log status   :', rec.status);
+    console.log('log stub     :', rec.stub);
+  }
   console.log('------------------------------------------------');
-  if (rec.stub === false && rec.sent >= 1) {
-    console.log('✅ REAL EMAIL SENT to ' + TO + ' — check the inbox (and spam on first send).');
-  } else if (rec.stub === true) {
-    console.log('⚠️  STILL SIMULATED — SMTP creds are not loaded.');
-    console.log('    Start the backend via start-msyep.cmd with MAIL_USERNAME/MAIL_PASSWORD filled in.');
+  if (outcome.startsWith('FAILED')) {
+    console.log('❌ SEND FAILED — the SMTP server rejected it:');
+    console.log('   ' + outcome.replace(/^FAILED:/, '').trim());
+  } else if (rec && rec.stub === false && outcome.startsWith('SENT')) {
+    console.log('✅ REAL EMAIL SENT to ' + TO + ' — check the inbox (and Spam on first send).');
+  } else if (rec && rec.stub === true) {
+    console.log('⚠️  STILL SIMULATED — SMTP creds not loaded. Restart via start-msyep.cmd.');
   } else {
-    console.log('❌ Send did not succeed. Per-student result:', JSON.stringify(rec.results));
+    console.log('⚠️  Unclear — outcome:', outcome, '| newest log:', rec && rec.status);
   }
   console.log('================================================');
 } catch (e) {
