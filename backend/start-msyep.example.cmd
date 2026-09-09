@@ -20,4 +20,5 @@ REM set "MONGODB_URI=mongodb+srv://USER:PASS@cluster.mongodb.net/msyep"
 
 cd /d "%~dp0"
 REM Use the full path — Windows does not resolve commands from the current directory.
-call "%~dp0mvnw.cmd" -o spring-boot:run
+REM MOU/PDF generation is memory-hungry; give the JVM room so it cannot exhaust the heap.
+call "%~dp0mvnw.cmd" -o spring-boot:run -Dspring-boot.run.jvmArguments="-Xmx1536m"
