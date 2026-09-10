@@ -132,7 +132,13 @@ public class ZoneController {
         List<Zone> zones = req.zoneIds().stream()
                 .map(id -> { try { return service.findById(id); } catch (Exception e) { return null; } })
                 .filter(java.util.Objects::nonNull).toList();
-        return ApiResponse.ok("Mail dispatch complete", franchiseMail.sendToZones(zones, req.subject(), req.body()));
+        // The Certificate + ~10 MB MOU take over a minute to push to the SMTP relay, so hand the send
+        // to the background executor and answer now — the result appears in Sent Mail History.
+        franchiseMail.sendToZonesAsync(zones, req.subject(), req.body());
+        Map<String, String> queued = zones.stream().collect(java.util.stream.Collectors.toMap(
+                Zone::getId, z -> "QUEUED", (a, b) -> a, java.util.LinkedHashMap::new));
+        return ApiResponse.ok("Sending " + zones.size() + " mail(s) in the background — "
+                + "the attachments are large, so it can take a minute. Check Sent Mail History for the result.", queued);
     }
 
     /** Sent-mail history for the Zone wing. */
