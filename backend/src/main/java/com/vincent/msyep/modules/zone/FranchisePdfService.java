@@ -86,17 +86,75 @@ public class FranchisePdfService {
      */
     private static final int ANNEXE_FIRST_PAGE = 28;
 
+    /**
+     * Bump this whenever the MOU-building code changes, so cached PDFs built by the previous version
+     * are ignored instead of being served after a deploy.
+     */
+    private static final String CACHE_VERSION = "mou-v1";
+
     private final String uploadsDir;
     private final com.vincent.msyep.modules.admin.AdminSignatureService adminSignature;
+    private final MouCache mouCache;
 
     public FranchisePdfService(@Value("${app.uploads-dir:uploads}") String uploadsDir,
-                               com.vincent.msyep.modules.admin.AdminSignatureService adminSignature) {
+                               com.vincent.msyep.modules.admin.AdminSignatureService adminSignature,
+                               MouCache mouCache) {
         this.uploadsDir = uploadsDir;
         this.adminSignature = adminSignature;
+        this.mouCache = mouCache;
     }
 
-    /** Personalised MOU bytes (unsigned). */
+    /**
+     * Personalised MOU bytes (unsigned), served from the on-disk cache when nothing that affects the
+     * document has changed. A build rewrites 42 pages three times and takes ~11 seconds, so repeat
+     * downloads of an unchanged zone would otherwise redo all of it.
+     */
     public byte[] buildMou(Zone zone) {
+        String key = mouCacheKey(zone);
+        byte[] cached = mouCache.get(zone.getId(), key);
+        if (cached != null) return cached;
+
+        byte[] built = buildMouUncached(zone);
+        mouCache.put(zone.getId(), key, built);
+        return built;
+    }
+
+    /**
+     * Fingerprint of every input that can change the rendered MOU: the zone's own fields, the files it
+     * has uploaded (logo / signatures), and the admin "giver" signature shared across zones. Change any
+     * of them and the key changes, so the previous build simply misses rather than being served stale.
+     * CACHE_VERSION is bumped by hand whenever the PDF-building code itself changes.
+     */
+    private String mouCacheKey(Zone zone) {
+        StringBuilder sb = new StringBuilder(CACHE_VERSION)
+                .append('|').append(zone.getId())
+                .append('|').append(zone.getUpdatedAt())
+                .append('|').append(zone.getName())
+                .append('|').append(zone.getCode());
+        if (zone.getDocuments() != null) {
+            zone.getDocuments().stream()
+                    .sorted(java.util.Comparator.comparing(d -> String.valueOf(d.getType())))
+                    .forEach(d -> sb.append('|').append(d.getType()).append(':').append(d.getFilename())
+                            .append(':').append(d.getSize()).append(':').append(d.getPath()));
+        }
+        sb.append("|sig:").append(adminSignature.stamp());
+        return sha1Hex(sb.toString());
+    }
+
+    private static String sha1Hex(String s) {
+        try {
+            byte[] h = java.security.MessageDigest.getInstance("SHA-1")
+                    .digest(s.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder out = new StringBuilder(h.length * 2);
+            for (byte b : h) out.append(Character.forDigit((b >> 4) & 0xF, 16)).append(Character.forDigit(b & 0xF, 16));
+            return out.toString();
+        } catch (Exception e) {
+            return Integer.toHexString(s.hashCode());   // still deterministic, just shorter
+        }
+    }
+
+    /** The actual (expensive) MOU build. */
+    private byte[] buildMouUncached(Zone zone) {
         byte[] template = readTemplate();
         if (template == null) throw new IllegalStateException("MOU template not bundled");
 

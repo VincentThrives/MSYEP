@@ -40,6 +40,28 @@ public class AdminSignatureService {
         return Files.exists(file());
     }
 
+    /**
+     * Cheap version marker for caches that embed this signature (e.g. the MOU). Changes whenever the
+     * signature file is replaced, without reading the image back in.
+     */
+    public String stamp() {
+        Path f = file();
+        if (Files.exists(f)) {
+            try {
+                return "custom:" + Files.size(f) + ":" + Files.getLastModifiedTime(f).toMillis();
+            } catch (Exception ignored) { }
+        }
+        for (String legacy : new String[]{"giver-signature.png", "approval-signature.png"}) {
+            Path lp = Paths.get(uploadsDir, "system", legacy);
+            if (Files.exists(lp)) {
+                try {
+                    return legacy + ":" + Files.size(lp) + ":" + Files.getLastModifiedTime(lp).toMillis();
+                } catch (Exception ignored) { }
+            }
+        }
+        return "default";
+    }
+
     /** Current admin/giver signature bytes: the uploaded override, else legacy files, else the bundled default. */
     public byte[] get() {
         if (Files.exists(file())) {

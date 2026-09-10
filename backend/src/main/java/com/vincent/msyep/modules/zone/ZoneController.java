@@ -25,12 +25,16 @@ public class ZoneController {
     private final FranchisePdfService franchisePdf;
     private final FranchiseMailService franchiseMail;
 
+    private final MouCache mouCache;
+
     public ZoneController(ZoneService service, ZoneRegistrationService registration,
-                          FranchisePdfService franchisePdf, FranchiseMailService franchiseMail) {
+                          FranchisePdfService franchisePdf, FranchiseMailService franchiseMail,
+                          MouCache mouCache) {
         this.service = service;
         this.registration = registration;
         this.franchisePdf = franchisePdf;
         this.franchiseMail = franchiseMail;
+        this.mouCache = mouCache;
     }
 
     @GetMapping
@@ -57,7 +61,11 @@ public class ZoneController {
             @RequestParam("type") String type,
             @RequestParam(value = "label", required = false) String label,
             @RequestParam("file") MultipartFile file) {
-        return ApiResponse.ok("Document uploaded", service.attachDocument(id, type, label, file));
+        Zone updated = service.attachDocument(id, type, label, file);
+        // A re-upload can keep the same name and size, which would leave the MOU fingerprint unchanged —
+        // so drop the cached build explicitly rather than relying on the key to differ.
+        mouCache.evict(id);
+        return ApiResponse.ok("Document uploaded", updated);
     }
 
     @PutMapping("/{id}")
