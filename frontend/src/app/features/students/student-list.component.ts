@@ -79,10 +79,18 @@ export class StudentListComponent {
   private advancedFrom = new Set<string>();
 
   constructor() {
-    this.data.centers().subscribe((c) => this.centers.set(c));
-    this.data.zones().subscribe((z) => this.zones.set(z));
-    // A CENTER login is locked to its own zone+center; a ZONE login to its own zone.
     const role = this.auth.role();
+    if (role === 'STUDENT') {
+      // Students may not read the full zone/center records (those carry Aadhaar, PAN and bank
+      // details). Their zone/center fields are read-only anyway, so the public name-only lists
+      // are all they need.
+      this.auth.publicZones().subscribe((z) => this.zones.set(z as any));
+      this.auth.publicCenters().subscribe((c) => this.centers.set(c as any));
+    } else {
+      this.data.centers().subscribe((c) => this.centers.set(c));
+      this.data.zones().subscribe((z) => this.zones.set(z));
+    }
+    // A CENTER login is locked to its own zone+center; a ZONE login to its own zone.
     const u = this.auth.user();
     if (role === 'CENTER') { this.lockZone = true; this.lockCenter = true; }
     else if (role === 'ZONE') { this.lockZone = true; }

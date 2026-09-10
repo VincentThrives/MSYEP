@@ -20,6 +20,10 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/centers")
+// Center records carry principal/contact details and uploaded documents, so no student may read
+// them — students only need center NAMES, served by the public /public/centers projection.
+// Individual methods narrow this further (e.g. only admins may create a center).
+@PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STAFF','ZONE','CENTER','FINANCE')")
 public class CenterController {
 
     private final CenterService service;
