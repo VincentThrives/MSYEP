@@ -51,6 +51,24 @@ public class FranchiseMailService {
         return r.getOrDefault(zone.getId(), "NO_EMAIL");
     }
 
+    /**
+     * Same dispatch, run off the request thread.
+     *
+     * <p>Each mail carries the Certificate plus the ~10 MB MOU, and pushing that to the SMTP relay
+     * takes over a minute — long enough that the browser looked hung and users assumed the send had
+     * failed. The HTTP call now returns straight away and the outcome lands in Sent Mail History.
+     */
+    @org.springframework.scheduling.annotation.Async("mailExecutor")
+    public void sendToZonesAsync(List<Zone> zones, String subject, String body) {
+        try {
+            Map<String, String> r = sendToZones(zones, subject, body);
+            log.info("Background zone mail finished: {}", r);
+        } catch (Exception e) {
+            // Already recorded in the mail log; nothing is waiting on this thread to report to.
+            log.error("Background zone mail failed: {}", e.getMessage(), e);
+        }
+    }
+
     /** Bulk send from the Zone Mail page; records one history entry with the PDFs. */
     public Map<String, String> sendToZones(List<Zone> zones, String subject, String body) {
         Map<String, String> result = new LinkedHashMap<>();

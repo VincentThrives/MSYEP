@@ -25,12 +25,16 @@ public class ZoneController {
     private final FranchisePdfService franchisePdf;
     private final FranchiseMailService franchiseMail;
 
+    private final MouCache mouCache;
+
     public ZoneController(ZoneService service, ZoneRegistrationService registration,
-                          FranchisePdfService franchisePdf, FranchiseMailService franchiseMail) {
+                          FranchisePdfService franchisePdf, FranchiseMailService franchiseMail,
+                          MouCache mouCache) {
         this.service = service;
         this.registration = registration;
         this.franchisePdf = franchisePdf;
         this.franchiseMail = franchiseMail;
+        this.mouCache = mouCache;
     }
 
     @GetMapping
@@ -57,7 +61,11 @@ public class ZoneController {
             @RequestParam("type") String type,
             @RequestParam(value = "label", required = false) String label,
             @RequestParam("file") MultipartFile file) {
-        return ApiResponse.ok("Document uploaded", service.attachDocument(id, type, label, file));
+        Zone updated = service.attachDocument(id, type, label, file);
+        // A re-upload can keep the same name and size, which would leave the MOU fingerprint unchanged —
+        // so drop the cached build explicitly rather than relying on the key to differ.
+        mouCache.evict(id);
+        return ApiResponse.ok("Document uploaded", updated);
     }
 
     @PutMapping("/{id}")
@@ -124,7 +132,13 @@ public class ZoneController {
         List<Zone> zones = req.zoneIds().stream()
                 .map(id -> { try { return service.findById(id); } catch (Exception e) { return null; } })
                 .filter(java.util.Objects::nonNull).toList();
-        return ApiResponse.ok("Mail dispatch complete", franchiseMail.sendToZones(zones, req.subject(), req.body()));
+        // The Certificate + ~10 MB MOU take over a minute to push to the SMTP relay, so hand the send
+        // to the background executor and answer now — the result appears in Sent Mail History.
+        franchiseMail.sendToZonesAsync(zones, req.subject(), req.body());
+        Map<String, String> queued = zones.stream().collect(java.util.stream.Collectors.toMap(
+                Zone::getId, z -> "QUEUED", (a, b) -> a, java.util.LinkedHashMap::new));
+        return ApiResponse.ok("Sending " + zones.size() + " mail(s) in the background — "
+                + "the attachments are large, so it can take a minute. Check Sent Mail History for the result.", queued);
     }
 
     /** Sent-mail history for the Zone wing. */
