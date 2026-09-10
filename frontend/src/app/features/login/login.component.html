@@ -26,9 +26,10 @@
         <form *ngIf="isPasswordMode()" (ngSubmit)="submit()">
           <div class="mode-hint">{{ modeHint() }}</div>
           <mat-form-field appearance="outline" class="full">
-            <mat-label>Email</mat-label>
-            <mat-icon matPrefix>mail</mat-icon>
-            <input matInput type="email" name="email" [(ngModel)]="email" required autocomplete="username" />
+            <mat-label>{{ mode() === 'student' ? 'Mobile number or Email' : 'Email' }}</mat-label>
+            <mat-icon matPrefix>{{ mode() === 'student' ? 'person' : 'mail' }}</mat-icon>
+            <input matInput [type]="mode() === 'student' ? 'text' : 'email'" name="email"
+                   [(ngModel)]="email" required autocomplete="username" />
           </mat-form-field>
           <mat-form-field appearance="outline" class="full">
             <mat-label>Password</mat-label>
@@ -47,9 +48,21 @@
           <div class="reg-cta" *ngIf="mode() === 'center'">
             New center? <a routerLink="/register-center"><mat-icon>add_home_work</mat-icon> Register as a Center</a>
           </div>
+          <!-- Students self-register and choose their own password -->
+          <div class="reg-cta" *ngIf="mode() === 'student'">
+            New student? <a routerLink="/register">Create an account</a>
+          </div>
+          <div class="hint" *ngIf="mode() === 'student'">
+            Sign in with your registered mobile number or email.
+          </div>
         </form>
 
-        <!-- Student: OTP only, no password -->
+        <!-- ==================================================================
+             Student OTP sign-in — DISABLED.
+             Students now register with a password and sign in above using their
+             mobile number or email. Kept here (and in AuthService/AuthController)
+             so the OTP flow can be restored by un-commenting this block.
+             ==================================================================
         <ng-container *ngIf="mode() === 'student'">
           <form *ngIf="!otpSent()" (ngSubmit)="sendOtp()">
             <mat-form-field appearance="outline" class="full">
@@ -85,6 +98,7 @@
             </div>
           </form>
         </ng-container>
+        -->
 
         <div class="hint foot">Super Admin · Admin · Zone · Center · Finance · Student</div>
       </div>

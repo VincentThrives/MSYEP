@@ -33,6 +33,14 @@ public class AuthController {
         return ApiResponse.ok(result.message(), result);
     }
 
+    /* ------------------------------------------------------------------
+     * OTP sign-in — DISABLED.
+     *
+     * Students now choose a password when they register and sign in with their
+     * mobile number or email plus that password (see AuthService.login). The OTP
+     * flow is left intact in AuthService/OtpService so it can be switched back on
+     * by simply un-commenting these two endpoints.
+     * ------------------------------------------------------------------
     @PostMapping("/otp/request")
     public ApiResponse<OtpRequestResult> requestOtp(@Valid @RequestBody OtpRequest req) {
         OtpRequestResult result = authService.requestOtp(req.identifier());
@@ -43,6 +51,7 @@ public class AuthController {
     public ApiResponse<AuthResponse> verifyOtp(@Valid @RequestBody OtpVerify req) {
         return ApiResponse.ok("Login successful", authService.verifyOtp(req.identifier(), req.otp()));
     }
+    */
 
     @GetMapping("/me")
     public ApiResponse<MsyepPrincipal> me(@AuthenticationPrincipal MsyepPrincipal principal) {

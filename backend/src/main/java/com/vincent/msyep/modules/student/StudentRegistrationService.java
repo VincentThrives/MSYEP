@@ -30,7 +30,18 @@ public class StudentRegistrationService {
         this.encoder = encoder;
     }
 
+    /** Register without an explicitly chosen password (admin-created students). */
     public StudentRegistrationResult register(Student input) {
+        return register(input, null);
+    }
+
+    /**
+     * @param chosenPassword the password the student picked during self-registration. When absent we
+     *                       fall back to any password carried on the record, and failing that store a
+     *                       random unusable hash (the account then has no way to sign in until a
+     *                       password is set).
+     */
+    public StudentRegistrationResult register(Student input, String chosenPassword) {
         if (!StringUtils.hasText(input.getName())) {
             throw new IllegalArgumentException("Student name is required");
         }
@@ -40,7 +51,8 @@ public class StudentRegistrationService {
         String registerNo = String.format("MSYEP%d%06d", year, seq);
         String batchCode = String.format("BATCH-%d-%03d", year, seq);
 
-        // Students authenticate by OTP only — no password is ever collected or stored.
+        // Students now sign in with a password they choose; only the hash is ever stored.
+        String rawPassword = StringUtils.hasText(chosenPassword) ? chosenPassword : input.getPassword();
         String userId = input.getUserId();
         input.setId(null);
         input.setRegisterNo(registerNo);
@@ -64,8 +76,9 @@ public class StudentRegistrationService {
             User u = users.save(User.builder()
                     .name(saved.getName())
                     .email(loginId)
-                    // Random unusable hash — student logins go through OTP, never a password.
-                    .passwordHash(encoder.encode(UUID.randomUUID().toString()))
+                    // The chosen password, or a random unusable hash when none was supplied.
+                    .passwordHash(encoder.encode(StringUtils.hasText(rawPassword)
+                            ? rawPassword : UUID.randomUUID().toString()))
                     .role(Role.STUDENT)
                     .studentId(saved.getId())
                     .centerId(saved.getCenterId())
@@ -76,8 +89,8 @@ public class StudentRegistrationService {
         }
 
         String note = wantsLogin
-                ? "Student registered. OTP login enabled for " + loginId + "."
-                : "Student registered (no email/mobile provided — OTP login unavailable).";
+                ? "Student registered. Sign in as " + loginId + " with the chosen password."
+                : "Student registered (no email/mobile provided — login unavailable).";
         return new StudentRegistrationResult(saved, registerNo, batchCode, loginId, note);
     }
 
