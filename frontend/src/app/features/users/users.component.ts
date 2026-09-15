@@ -9,6 +9,8 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { ConfirmDialogComponent, ResetPasswordDialogComponent } from './user-dialogs.component';
 
 import { DataService } from '../../core/data.service';
 import { Center, Role, Zone } from '../../core/models';
@@ -24,7 +26,7 @@ const ROLES: Role[] = ['ADMIN', 'ZONE', 'CENTER', 'STAFF', 'FINANCE'];
   imports: [
     CommonModule, FormsModule, MatTableModule, MatButtonModule, MatIconModule,
     MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule, MatTooltipModule,
-    SearchSelectComponent,
+    MatDialogModule, SearchSelectComponent,
   ],
   templateUrl: './users.component.html',
   styleUrl: './users.component.scss',
@@ -32,6 +34,7 @@ const ROLES: Role[] = ['ADMIN', 'ZONE', 'CENTER', 'STAFF', 'FINANCE'];
 export class UsersComponent {
   private data = inject(DataService);
   private snack = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
   cols = ['name', 'email', 'role', 'status', 'actions'];
   roles = ROLES;
@@ -79,35 +82,59 @@ export class UsersComponent {
   toggleActive(u: any): void {
     const next = !(u.active !== false);
     const verb = next ? 'Activate' : 'Deactivate';
-    if (!confirm(`${verb} login "${u.email}"?`)) return;
-    this.data.setUserActive(u.id, next).subscribe({
-      next: () => {
-        this.snack.open(next ? 'Login activated' : 'Login deactivated', 'OK', { duration: 2500 });
-        this.load();
+    this.dialog.open(ConfirmDialogComponent, {
+      width: '420px', maxWidth: '94vw',
+      data: {
+        title: `${verb} login`,
+        message: next
+          ? `"${u.email}" will be able to sign in again.`
+          : `"${u.email}" will no longer be able to sign in. Their data and history are kept, and you can reactivate them at any time.`,
+        confirmLabel: verb,
+        danger: !next,
       },
-      error: (e) => this.snack.open(e?.error?.message || `${verb} failed`, 'OK', { duration: 4000 }),
+    }).afterClosed().subscribe((yes) => {
+      if (!yes) return;
+      this.data.setUserActive(u.id, next).subscribe({
+        next: () => {
+          this.snack.open(next ? 'Login activated' : 'Login deactivated', 'OK', { duration: 2500 });
+          this.load();
+        },
+        error: (e) => this.snack.open(e?.error?.message || `${verb} failed`, 'OK', { duration: 4000 }),
+      });
     });
   }
 
   /** Set a new password for any login (the old one is not needed). */
   resetPassword(u: any): void {
-    const pwd = prompt(`New password for "${u.email}" (at least 6 characters):`);
-    if (pwd === null) return;                       // cancelled
-    if (pwd.trim().length < 6) {
-      this.snack.open('Password must be at least 6 characters', 'OK', { duration: 3000 });
-      return;
-    }
-    this.data.resetUserPassword(u.id, pwd).subscribe({
-      next: () => this.snack.open(`Password updated for ${u.email}`, 'OK', { duration: 3500 }),
-      error: (e) => this.snack.open(e?.error?.message || 'Password reset failed', 'OK', { duration: 4000 }),
+    this.dialog.open(ResetPasswordDialogComponent, {
+      width: '420px', maxWidth: '94vw', data: { email: u.email },
+    }).afterClosed().subscribe((pwd: string | undefined) => {
+      if (!pwd) return;                            // cancelled
+      this.data.resetUserPassword(u.id, pwd).subscribe({
+        next: () => this.snack.open(`Password updated for ${u.email}`, 'OK', { duration: 3500 }),
+        error: (e) => this.snack.open(e?.error?.message || 'Password reset failed', 'OK', { duration: 4000 }),
+      });
     });
   }
 
   remove(u: any): void {
-    if (!confirm(`Delete login "${u.email}"?\n\nThis cannot be undone — use Deactivate instead if you may need it later.`)) return;
-    this.data.deleteUser(u.id).subscribe(() => {
-      this.snack.open('Login deleted', 'OK', { duration: 2000 });
-      this.load();
+    this.dialog.open(ConfirmDialogComponent, {
+      width: '440px', maxWidth: '94vw',
+      data: {
+        title: 'Delete login',
+        message: `"${u.email}" will be permanently removed.\n\nThis cannot be undone — use Deactivate instead if you may need it later.`,
+        confirmLabel: 'Delete',
+        danger: true,
+      },
+    }).afterClosed().subscribe((yes) => {
+      if (!yes) return;
+      this.data.deleteUser(u.id).subscribe({
+        next: () => {
+          this.snack.open('Login deleted', 'OK', { duration: 2000 });
+          this.load();
+        },
+        error: (e) => this.snack.open(e?.error?.message || 'Delete failed', 'OK', { duration: 4000 }),
+      });
     });
   }
 }
