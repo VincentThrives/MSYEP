@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -42,6 +42,31 @@ export class UsersComponent {
   zones = signal<Zone[]>([]);
   centers = signal<Center[]>([]);
   editing = signal(false);
+
+  // ----- filters (client-side; the whole list is already loaded) -----
+  search = signal('');
+  roleFilter = signal('');
+
+  /** Roles actually present in the data, so the dropdown never offers an empty option. */
+  roleOptions = computed(() =>
+    [...new Set(this.users().map((u) => u.role).filter(Boolean))].sort());
+
+  filteredUsers = computed(() => {
+    const q = this.search().trim().toLowerCase();
+    const role = this.roleFilter();
+    return this.users().filter((u) => {
+      if (role && u.role !== role) return false;
+      if (!q) return true;
+      return `${u.name || ''} ${u.email || ''}`.toLowerCase().includes(q);
+    });
+  });
+
+  hasFilters = computed(() => !!this.search().trim() || !!this.roleFilter());
+
+  clearFilters(): void {
+    this.search.set('');
+    this.roleFilter.set('');
+  }
   form: any = this.blank();
   hidePassword = true;   // password show/hide (eye) toggle
 

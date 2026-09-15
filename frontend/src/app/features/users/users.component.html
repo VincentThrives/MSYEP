@@ -32,7 +32,40 @@
       </div>
     </div>
 
-    <table mat-table [dataSource]="users()" class="mat-elevation-z1 full">
+    <!-- Search + role filter (client-side over the already-loaded list) -->
+    <div class="list-filters">
+      <mat-form-field appearance="outline" class="search">
+        <mat-label>Search name or email</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input matInput [ngModel]="search()" (ngModelChange)="search.set($event)"
+               placeholder="Start typing…" />
+        <button mat-icon-button matSuffix type="button" *ngIf="search()"
+                (click)="search.set('')" aria-label="Clear search">
+          <mat-icon>close</mat-icon>
+        </button>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="role">
+        <mat-label>Role</mat-label>
+        <mat-select [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)">
+          <mat-option value="">All roles</mat-option>
+          <mat-option *ngFor="let r of roleOptions()" [value]="r">{{ r }}</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <button mat-stroked-button class="clear" *ngIf="hasFilters()" (click)="clearFilters()">
+        <mat-icon>filter_alt_off</mat-icon> Clear
+      </button>
+
+      <span class="count">{{ filteredUsers().length }} of {{ users().length }} logins</span>
+    </div>
+
+    <p class="empty" *ngIf="filteredUsers().length === 0">
+      No logins match this search.
+    </p>
+
+    <table mat-table [dataSource]="filteredUsers()" class="mat-elevation-z1 full"
+           [hidden]="filteredUsers().length === 0">
       <ng-container matColumnDef="name">
         <th mat-header-cell *matHeaderCellDef>Name</th>
         <td mat-cell *matCellDef="let u">{{ u.name }}</td>
