@@ -8,6 +8,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { DataService } from '../../core/data.service';
 import { Center, Role, Zone } from '../../core/models';
@@ -22,7 +23,8 @@ const ROLES: Role[] = ['ADMIN', 'ZONE', 'CENTER', 'STAFF', 'FINANCE'];
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatTableModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule, SearchSelectComponent,
+    MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule, MatTooltipModule,
+    SearchSelectComponent,
   ],
   templateUrl: './users.component.html',
   styleUrl: './users.component.scss',
@@ -31,7 +33,7 @@ export class UsersComponent {
   private data = inject(DataService);
   private snack = inject(MatSnackBar);
 
-  cols = ['name', 'email', 'role', 'actions'];
+  cols = ['name', 'email', 'role', 'status', 'actions'];
   roles = ROLES;
   users = signal<any[]>([]);
   zones = signal<Zone[]>([]);
@@ -70,8 +72,39 @@ export class UsersComponent {
     });
   }
 
+  /**
+   * Enable/disable a login. Deactivating keeps the account and its history but refuses sign-in,
+   * so it is the reversible alternative to deleting.
+   */
+  toggleActive(u: any): void {
+    const next = !(u.active !== false);
+    const verb = next ? 'Activate' : 'Deactivate';
+    if (!confirm(`${verb} login "${u.email}"?`)) return;
+    this.data.setUserActive(u.id, next).subscribe({
+      next: () => {
+        this.snack.open(next ? 'Login activated' : 'Login deactivated', 'OK', { duration: 2500 });
+        this.load();
+      },
+      error: (e) => this.snack.open(e?.error?.message || `${verb} failed`, 'OK', { duration: 4000 }),
+    });
+  }
+
+  /** Set a new password for any login (the old one is not needed). */
+  resetPassword(u: any): void {
+    const pwd = prompt(`New password for "${u.email}" (at least 6 characters):`);
+    if (pwd === null) return;                       // cancelled
+    if (pwd.trim().length < 6) {
+      this.snack.open('Password must be at least 6 characters', 'OK', { duration: 3000 });
+      return;
+    }
+    this.data.resetUserPassword(u.id, pwd).subscribe({
+      next: () => this.snack.open(`Password updated for ${u.email}`, 'OK', { duration: 3500 }),
+      error: (e) => this.snack.open(e?.error?.message || 'Password reset failed', 'OK', { duration: 4000 }),
+    });
+  }
+
   remove(u: any): void {
-    if (!confirm(`Delete login "${u.email}"?`)) return;
+    if (!confirm(`Delete login "${u.email}"?\n\nThis cannot be undone — use Deactivate instead if you may need it later.`)) return;
     this.data.deleteUser(u.id).subscribe(() => {
       this.snack.open('Login deleted', 'OK', { duration: 2000 });
       this.load();

@@ -20,6 +20,10 @@ export class ApiService {
     return this.http.post<ApiResponse<T>>(this.base + path, body).pipe(map((r) => r.data));
   }
 
+  patch<T>(path: string, body: unknown): Observable<T> {
+    return this.http.patch<ApiResponse<T>>(this.base + path, body).pipe(map((r) => r.data));
+  }
+
   put<T>(path: string, body: unknown): Observable<T> {
     return this.http.put<ApiResponse<T>>(this.base + path, body).pipe(map((r) => r.data));
   }

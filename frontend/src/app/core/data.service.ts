@@ -180,4 +180,9 @@ export class DataService {
   users = () => this.api.get<any[]>('/users');
   createUser = (u: any) => this.api.post<any>('/users', u);
   deleteUser = (id: string) => this.api.delete<void>(`/users/${id}`);
+  /** Enable/disable a login without deleting it. */
+  setUserActive = (id: string, active: boolean) => this.api.patch<any>(`/users/${id}/active`, { active });
+  /** Admin-driven password reset — the old password is not required. */
+  resetUserPassword = (id: string, password: string) =>
+    this.api.post<any>(`/users/${id}/reset-password`, { password });
 }
