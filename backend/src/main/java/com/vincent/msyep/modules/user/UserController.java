@@ -4,6 +4,7 @@ import com.vincent.msyep.common.ApiResponse;
 import com.vincent.msyep.config.security.MsyepPrincipal;
 import com.vincent.msyep.modules.user.dto.CreateUserRequest;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -46,7 +47,11 @@ public class UserController {
         return ApiResponse.ok(req.active() ? "Login activated" : "Login deactivated", u);
     }
 
-    /** Admin-driven password reset: set a new password without needing the old one. */
+    /**
+     * Password reset: set a new password without needing the old one.
+     * Available to Admins and Super Admins (SecurityConfig already limits /users/** to those two).
+     */
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
     @PostMapping("/{id}/reset-password")
     public ApiResponse<User> resetPassword(@PathVariable String id,
                                            @RequestBody ResetPasswordRequest req) {
