@@ -1,8 +1,11 @@
 package com.vincent.msyep.modules.user;
 
 import com.vincent.msyep.common.ApiResponse;
+import com.vincent.msyep.config.security.MsyepPrincipal;
 import com.vincent.msyep.modules.user.dto.CreateUserRequest;
 import jakarta.validation.Valid;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,6 +32,32 @@ public class UserController {
         User u = service.create(req);
         u.setPasswordHash(null);
         return ApiResponse.ok("User created", u);
+    }
+
+    public record ActiveRequest(boolean active) {}
+    public record ResetPasswordRequest(String password) {}
+
+    /** Enable/disable a login — the reversible alternative to deleting it. */
+    @PatchMapping("/{id}/active")
+    public ApiResponse<User> setActive(@PathVariable String id,
+                                       @RequestBody ActiveRequest req,
+                                       @AuthenticationPrincipal MsyepPrincipal me) {
+        User u = service.setActive(id, req.active(), me == null ? null : me.userId());
+        u.setPasswordHash(null);
+        return ApiResponse.ok(req.active() ? "Login activated" : "Login deactivated", u);
+    }
+
+    /**
+     * Password reset: set a new password without needing the old one.
+     * Available to Admins and Super Admins (SecurityConfig already limits /users/** to those two).
+     */
+    @PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN')")
+    @PostMapping("/{id}/reset-password")
+    public ApiResponse<User> resetPassword(@PathVariable String id,
+                                           @RequestBody ResetPasswordRequest req) {
+        User u = service.resetPassword(id, req.password());
+        u.setPasswordHash(null);
+        return ApiResponse.ok("Password updated for " + u.getEmail(), u);
     }
 
     @DeleteMapping("/{id}")

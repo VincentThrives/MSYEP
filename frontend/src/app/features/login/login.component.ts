@@ -98,9 +98,13 @@ export class LoginComponent implements OnInit, OnDestroy {
     return err?.error?.message || fallback;
   }
 
-  /** Staff, Zone and Center all sign in with email + password (the account's role decides the portal). */
+  /**
+   * Every role now signs in with a username + password (the account's role decides the portal).
+   * Students use their registered mobile number or email as the username.
+   * (Was: students were OTP-only — that flow is disabled but kept below.)
+   */
   isPasswordMode(): boolean {
-    return this.mode() !== 'student';
+    return true;
   }
 
   modeHint(): string {

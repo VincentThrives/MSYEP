@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
@@ -8,6 +8,9 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { ConfirmDialogComponent, ResetPasswordDialogComponent } from './user-dialogs.component';
 
 import { DataService } from '../../core/data.service';
 import { Center, Role, Zone } from '../../core/models';
@@ -22,7 +25,8 @@ const ROLES: Role[] = ['ADMIN', 'ZONE', 'CENTER', 'STAFF', 'FINANCE'];
   standalone: true,
   imports: [
     CommonModule, FormsModule, MatTableModule, MatButtonModule, MatIconModule,
-    MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule, SearchSelectComponent,
+    MatFormFieldModule, MatInputModule, MatSelectModule, MatSnackBarModule, MatTooltipModule,
+    MatDialogModule, SearchSelectComponent,
   ],
   templateUrl: './users.component.html',
   styleUrl: './users.component.scss',
@@ -30,13 +34,39 @@ const ROLES: Role[] = ['ADMIN', 'ZONE', 'CENTER', 'STAFF', 'FINANCE'];
 export class UsersComponent {
   private data = inject(DataService);
   private snack = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
-  cols = ['name', 'email', 'role', 'actions'];
+  cols = ['name', 'email', 'role', 'status', 'actions'];
   roles = ROLES;
   users = signal<any[]>([]);
   zones = signal<Zone[]>([]);
   centers = signal<Center[]>([]);
   editing = signal(false);
+
+  // ----- filters (client-side; the whole list is already loaded) -----
+  search = signal('');
+  roleFilter = signal('');
+
+  /** Roles actually present in the data, so the dropdown never offers an empty option. */
+  roleOptions = computed(() =>
+    [...new Set(this.users().map((u) => u.role).filter(Boolean))].sort());
+
+  filteredUsers = computed(() => {
+    const q = this.search().trim().toLowerCase();
+    const role = this.roleFilter();
+    return this.users().filter((u) => {
+      if (role && u.role !== role) return false;
+      if (!q) return true;
+      return `${u.name || ''} ${u.email || ''}`.toLowerCase().includes(q);
+    });
+  });
+
+  hasFilters = computed(() => !!this.search().trim() || !!this.roleFilter());
+
+  clearFilters(): void {
+    this.search.set('');
+    this.roleFilter.set('');
+  }
   form: any = this.blank();
   hidePassword = true;   // password show/hide (eye) toggle
 
@@ -70,11 +100,66 @@ export class UsersComponent {
     });
   }
 
+  /**
+   * Enable/disable a login. Deactivating keeps the account and its history but refuses sign-in,
+   * so it is the reversible alternative to deleting.
+   */
+  toggleActive(u: any): void {
+    const next = !(u.active !== false);
+    const verb = next ? 'Activate' : 'Deactivate';
+    this.dialog.open(ConfirmDialogComponent, {
+      width: '420px', maxWidth: '94vw',
+      data: {
+        title: `${verb} login`,
+        message: next
+          ? `"${u.email}" will be able to sign in again.`
+          : `"${u.email}" will no longer be able to sign in. Their data and history are kept, and you can reactivate them at any time.`,
+        confirmLabel: verb,
+        danger: !next,
+      },
+    }).afterClosed().subscribe((yes) => {
+      if (!yes) return;
+      this.data.setUserActive(u.id, next).subscribe({
+        next: () => {
+          this.snack.open(next ? 'Login activated' : 'Login deactivated', 'OK', { duration: 2500 });
+          this.load();
+        },
+        error: (e) => this.snack.open(e?.error?.message || `${verb} failed`, 'OK', { duration: 4000 }),
+      });
+    });
+  }
+
+  /** Set a new password for any login (the old one is not needed). */
+  resetPassword(u: any): void {
+    this.dialog.open(ResetPasswordDialogComponent, {
+      width: '420px', maxWidth: '94vw', data: { email: u.email },
+    }).afterClosed().subscribe((pwd: string | undefined) => {
+      if (!pwd) return;                            // cancelled
+      this.data.resetUserPassword(u.id, pwd).subscribe({
+        next: () => this.snack.open(`Password updated for ${u.email}`, 'OK', { duration: 3500 }),
+        error: (e) => this.snack.open(e?.error?.message || 'Password reset failed', 'OK', { duration: 4000 }),
+      });
+    });
+  }
+
   remove(u: any): void {
-    if (!confirm(`Delete login "${u.email}"?`)) return;
-    this.data.deleteUser(u.id).subscribe(() => {
-      this.snack.open('Login deleted', 'OK', { duration: 2000 });
-      this.load();
+    this.dialog.open(ConfirmDialogComponent, {
+      width: '440px', maxWidth: '94vw',
+      data: {
+        title: 'Delete login',
+        message: `"${u.email}" will be permanently removed.\n\nThis cannot be undone — use Deactivate instead if you may need it later.`,
+        confirmLabel: 'Delete',
+        danger: true,
+      },
+    }).afterClosed().subscribe((yes) => {
+      if (!yes) return;
+      this.data.deleteUser(u.id).subscribe({
+        next: () => {
+          this.snack.open('Login deleted', 'OK', { duration: 2000 });
+          this.load();
+        },
+        error: (e) => this.snack.open(e?.error?.message || 'Delete failed', 'OK', { duration: 4000 }),
+      });
     });
   }
 }

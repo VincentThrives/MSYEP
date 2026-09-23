@@ -18,6 +18,10 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/zones")
+// Zone records carry the franchisee's Aadhaar, PAN and bank details, so no student may read them —
+// students only ever need zone NAMES, which they get from the public /public/zones projection.
+// Individual methods narrow this further (e.g. only admins may create a zone).
+@PreAuthorize("hasAnyRole('SUPER_ADMIN','ADMIN','STAFF','ZONE','CENTER','FINANCE')")
 public class ZoneController {
 
     private final ZoneService service;

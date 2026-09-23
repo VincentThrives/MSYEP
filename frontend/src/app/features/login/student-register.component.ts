@@ -30,9 +30,13 @@ export class StudentRegisterComponent {
   private router = inject(Router);
 
   model: StudentSelfRegisterRequest = {
-    name: '', phone: '', email: '', gender: '', dateOfBirth: '', educationalQualification: '',
+    name: '', phone: '', email: '', password: '', confirmPassword: '',
+    gender: '', dateOfBirth: '', educationalQualification: '',
     zoneId: '', centerId: '', district: '', taluk: '', gramPanchayat: '',
   };
+
+  hidePassword = true;          // eye toggles for the two password fields
+  hideConfirmPassword = true;
 
   zones = signal<IdName[]>([]);
   centers = signal<IdName[]>([]);
@@ -57,12 +61,22 @@ export class StudentRegisterComponent {
       this.error.set('Name and a valid 10-digit mobile number are required.');
       return;
     }
+    if ((this.model.password || '').length < 6) {
+      this.error.set('Password must be at least 6 characters.');
+      return;
+    }
+    if (this.model.password !== this.model.confirmPassword) {
+      this.error.set('Passwords do not match.');
+      return;
+    }
     this.loading.set(true);
     this.error.set('');
     const payload: StudentSelfRegisterRequest = {
       name: this.model.name.trim(),
       phone: this.model.phone.trim(),
       email: this.model.email?.trim() || undefined,
+      password: this.model.password,
+      confirmPassword: this.model.confirmPassword,
       gender: this.model.gender || undefined,
       dateOfBirth: this.model.dateOfBirth || undefined,
       educationalQualification: this.model.educationalQualification || undefined,

@@ -161,6 +161,9 @@ export interface StudentSelfRegisterRequest {
   name: string;
   phone: string;
   email?: string;
+  /** Chosen at registration; the student then signs in with phone/email + this password. */
+  password: string;
+  confirmPassword: string;
   gender?: string;
   dateOfBirth?: string;
   educationalQualification?: string;

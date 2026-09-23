@@ -4,4 +4,18 @@
     .row mat-form-field { flex: 1; min-width: 180px; }
     .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
     .full { width: 100%; margin-top: 12px; }
+    /* Search + role filter row. */
+    .list-filters .search { flex: 1 1 280px; min-width: 200px; }
+    .list-filters .role { flex: 0 1 190px; min-width: 150px; }
+    .list-filters .count { color: #6b7d72; font-size: 13px; margin-left: auto; white-space: nowrap; }
+    .empty { color: #6b7d72; text-align: center; padding: 28px 12px; background: #fff;
+      border: 1px dashed #dfe6e1; border-radius: 12px; margin-top: 4px; }
+
+    /* Active / Deactivated badge in the Status column. */
+    .pill { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px;
+      font-weight: 700; letter-spacing: .3px; background: #e7f3ec; color: #1E7A46;
+      border: 1px solid #cde7d8; white-space: nowrap; }
+    .pill.off { background: #fdecec; color: #b3261e; border-color: #f5c9c6; }
+    /* A deactivated row reads as muted so it is obvious at a glance. */
+    tr.mat-mdc-row:has(.pill.off) td { opacity: .65; }
   

@@ -53,21 +53,29 @@ public class AuthService {
     }
 
     /** Password login — for Super Admin / Admin / Zone / Center / Staff / Finance (NOT students). */
+    /**
+     * Password sign-in for every role. The username field carries an email/User ID for staff, and for
+     * students either their email or their registered mobile number — students now choose a password
+     * at registration instead of signing in with an OTP.
+     */
     public AuthResponse login(LoginRequest req) {
-        User user = users.findByEmail(req.email().toLowerCase().trim())
-                .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
-        if (user.getRole() == Role.STUDENT) {
-            throw new BadCredentialsException("Students must sign in with OTP");
-        }
+        String identifier = req.email().toLowerCase().trim();
+        User user = users.findByEmail(identifier)
+                // Not an email/User ID — a student may be signing in with their mobile number.
+                .or(() -> resolveStudent(req.email()))
+                .orElseThrow(() -> new BadCredentialsException("Invalid username or password"));
         if (!user.isActive()) throw new BadCredentialsException("Account is disabled");
         if (!encoder.matches(req.password(), user.getPasswordHash())) {
-            throw new BadCredentialsException("Invalid email or password");
+            throw new BadCredentialsException("Invalid username or password");
         }
         return toResponse(user);
     }
 
     /** Public student self-registration — creates the student and an OTP-only login. */
     public StudentSelfRegister.Result registerStudent(StudentSelfRegister.Request req) {
+        if (!req.password().equals(req.confirmPassword())) {
+            throw new IllegalArgumentException("Passwords do not match");
+        }
         String phone = req.phone().trim();
         if (students.findByPhone(phone).isPresent()) {
             throw new IllegalArgumentException("A student is already registered with mobile " + phone);
@@ -93,11 +101,11 @@ public class AuthService {
         // Prefer email as the login id when given, else the mobile number.
         s.setUserId((email != null && !email.isBlank()) ? email : phone);
 
-        StudentRegistrationResult result = studentRegistration.register(s);
+        StudentRegistrationResult result = studentRegistration.register(s, req.password());
         return new StudentSelfRegister.Result(
                 result.registerNo(),
                 result.loginId(),
-                "Registration successful. Sign in with the OTP sent to your registered contact.");
+                "Registration successful. Sign in with your mobile number or email and the password you chose.");
     }
 
     /** Request an OTP for a student (by User ID / email or mobile number). */
