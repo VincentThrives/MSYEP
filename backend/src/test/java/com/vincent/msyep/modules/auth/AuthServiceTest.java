@@ -60,10 +60,21 @@ class AuthServiceTest {
     }
 
     @Test
+    void selfRegisterRejectsMismatchedPasswords() {
+        StudentSelfRegister.Request req = new StudentSelfRegister.Request(
+                "Name", "9000000001", "m@x.com", "Pass@1234", "Different@1",
+                null, null, null, null, null, null, null, null);
+        assertThatThrownBy(() -> auth.registerStudent(req))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Passwords do not match");
+    }
+
+    @Test
     void selfRegisterRejectsDuplicateMobile() {
         when(students.findByPhone("9999999999")).thenReturn(Optional.of(new Student()));
         StudentSelfRegister.Request req = new StudentSelfRegister.Request(
-                "Name", "9999999999", null, null, null, null, null, null, null, null, null);
+                "Name", "9999999999", null, "Pass@1234", "Pass@1234",
+                null, null, null, null, null, null, null, null);
         assertThatThrownBy(() -> auth.registerStudent(req)).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -72,7 +83,8 @@ class AuthServiceTest {
         when(students.findByPhone(any())).thenReturn(Optional.empty());
         when(users.existsByEmail("e@x.com")).thenReturn(true);
         StudentSelfRegister.Request req = new StudentSelfRegister.Request(
-                "Name", "9000000000", "e@x.com", null, null, null, null, null, null, null, null);
+                "Name", "9000000000", "e@x.com", "Pass@1234", "Pass@1234",
+                null, null, null, null, null, null, null, null);
         assertThatThrownBy(() -> auth.registerStudent(req)).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -82,14 +94,16 @@ class AuthServiceTest {
         when(users.existsByEmail(any())).thenReturn(false);
         Student saved = new Student();
         saved.setId("S1");
-        when(studentReg.register(any(Student.class)))
+        // Self-registration now passes the chosen password through, so stub the two-argument overload.
+        when(studentReg.register(any(Student.class), any()))
                 .thenReturn(new StudentRegistrationResult(saved, "MSYEP2026000001", "BATCH-2026-001", "login", "note"));
         StudentSelfRegister.Request req = new StudentSelfRegister.Request(
-                "Name", "9000000000", "e@x.com", null, null, null, null, null, null, null, null);
+                "Name", "9000000000", "e@x.com", "Pass@1234", "Pass@1234",
+                null, null, null, null, null, null, null, null);
 
         StudentSelfRegister.Result res = auth.registerStudent(req);
 
         assertThat(res.registerNo()).isEqualTo("MSYEP2026000001");
-        verify(studentReg).register(any(Student.class));
+        verify(studentReg).register(any(Student.class), any());
     }
 }
