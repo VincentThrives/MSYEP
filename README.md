@@ -1,6 +1,6 @@
 # MSYEP
 
-**Yukta Kaushalya Tarabethi** skilling-program portal — Karnataka.
+**Yuktha Kaushalya Tarabethi** skilling-program portal — Karnataka.
 
 A multi-tier portal (Super Admin · Admin · Zone · Center · Staff · Finance · Student)
 for managing universities (Zones), colleges (Centers), and students under the MSYEP program.
