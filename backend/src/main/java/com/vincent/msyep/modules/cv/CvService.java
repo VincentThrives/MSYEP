@@ -290,7 +290,7 @@ public class CvService {
             right.add(new Paragraph("\n").setFontSize(6));
             right.add(new Paragraph()
                     .add(new Text("Reference: ").setBold())
-                    .add(new Text("Trained under Yukta Kaushalya Tarabethi — MSYEP (Kaushalya Patha)."))
+                    .add(new Text("Trained under Yuktha Kaushalya Tarabethi — MSYEP (Kaushalya Patha)."))
                     .setFontSize(9).setFontColor(GREEN));
 
             layout.addCell(left);

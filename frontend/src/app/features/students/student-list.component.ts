@@ -65,6 +65,15 @@ export class StudentListComponent {
   /** Students sign in with OTP only — no User ID / Password on their own profile. */
   isStudent = false;
 
+  // Password the creating role may set for a new student, so the student can sign in straight away.
+  confirmPassword = '';
+  hidePassword = true;
+  hideConfirmPassword = true;
+  /** Only when a staff/admin/zone/center login is creating a NEW student — not when editing, and never for the student themselves. */
+  showPasswordFields(): boolean {
+    return !this.isStudent && !this.form?.id;
+  }
+
   /** Wizard sections in order — used for progress + auto-advance. */
   readonly sections = [
     { key: 'account', label: 'Account' },
@@ -231,9 +240,27 @@ export class StudentListComponent {
       return;
     }
     if (!this.form.id && !this.form.phone) {
-      this.snack.open('Mobile number is required — students sign in with OTP', 'OK', { duration: 3500 });
+      this.snack.open('Mobile number is required — the student signs in with it', 'OK', { duration: 3500 });
       this.tabIndex.set(0); // Account tab
       return;
+    }
+    // A password set here becomes the student's login password (see Student.password, which the
+    // backend uses to create the login and then clears). Optional — leave both blank and an admin
+    // can set one later from the Logins page.
+    if (this.showPasswordFields()) {
+      const pw = (this.form.password || '').trim();
+      if (pw || this.confirmPassword) {
+        if (pw.length < 6) {
+          this.snack.open('Password must be at least 6 characters', 'OK', { duration: 3000 });
+          this.tabIndex.set(0);
+          return;
+        }
+        if (pw !== this.confirmPassword) {
+          this.snack.open('Passwords do not match', 'OK', { duration: 3000 });
+          this.tabIndex.set(0);
+          return;
+        }
+      }
     }
     // Zone/Center are the student's fixed allotment — only the creating roles must pick them.
     if (!this.isStudent && (!this.form.zoneId || !this.form.centerId)) {
